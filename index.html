@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>شهردار ایران‌زمین</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1018;color:#f2f5fa;font-family:Tahoma,Arial,sans-serif}
+header{padding:22px;background:#121b28;border-bottom:1px solid #273548}
+h1{font-size:23px;margin:0 0 8px;color:#d8b56d}
+p{color:#aab6c7;font-size:13px;line-height:1.8}
+main{padding:18px;max-width:900px;margin:auto}
+.welcome{padding:22px;border:1px solid #344257;border-radius:18px;background:linear-gradient(135deg,#182638,#10151e)}
+h2{font-size:19px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+.card{padding:18px;background:#141e2b;border:1px solid #29384b;border-radius:14px;color:#fff;text-align:right;cursor:pointer}
+.card strong{display:block;font-size:16px;margin-bottom:9px}
+.card span{font-size:12px;color:#aab6c7}
+.card:active{border-color:#d8b56d}
+footer{text-align:center;padding:25px;color:#758398;font-size:11px}
+@media(min-width:600px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header>
+  <h1>شهردار ایران‌زمین</h1>
+  <p>دستیار هوشمند مشاوران املاک | از فایل تا قرارداد</p>
+</header>
+<main>
+  <section class="welcome">
+    <h2>به مرکز مدیریت املاک خوش آمدی</h2>
+    <p>فایل‌ها، مشتری‌ها، بازدیدها و عملکرد تیم را از یک پنل مدیریت کن.</p>
+  </section>
+  <section class="grid">
+    <button class="card" onclick="show('فایل‌های ملکی')"><strong>🏢 فایل‌های ملکی</strong><span>مدیریت و جست‌وجوی فایل‌ها</span></button>
+    <button class="card" onclick="show('مشتری‌ها')"><strong>👥 مشتری‌ها</strong><span>پیگیری خریداران و فروشندگان</span></button>
+    <button class="card" onclick="show('بازدیدها')"><strong>📅 بازدیدها</strong><span>برنامه‌ریزی و پیگیری بازدید</span></button>
+    <button class="card" onclick="show('عملکرد تیم')"><strong>📊 عملکرد تیم</strong><span>ارزیابی فعالیت‌ها و قراردادها</span></button>
+    <button class="card" onclick="show('شهردار هوشمند')"><strong>🤖 شهردار هوشمند</strong><span>کمک به تبدیل فایل به معامله</span></button>
+    <button class="card" onclick="show('شهرزاد و شهرساز')"><strong>🌆 شهرزاد و شهرساز</strong><span>بازار ملک و مشارکت در ساخت</span></button>
+  </section>
+  <p id="message"></p>
+</main>
+<footer>IRAN ZAMIN · REAL ESTATE INTELLIGENCE</footer>
+<script>
+function show(section){
+ document.getElementById('message').textContent=
+ 'بخش «'+section+'» در نسخه اولیه است؛ اتصال اطلاعات واقعی در مرحله بعد انجام می‌شود.';
+}
+</script>
+</body>
+</html>
