@@ -52,14 +52,14 @@ body.auth-required .tg-login-screen{display:flex}
 <div id="propertyFormPanel" class="panel hidden" style="margin-top:15px"><div class="panel-title"><h3>ثبت فایل ملکی</h3><span>ذخیره در CRM</span></div><div class="form-grid"><div class="form-field"><label for="propDeal">نوع معامله</label><select class="field" id="propDeal"><option>فروش</option><option>اجاره</option><option>مشارکت در ساخت</option></select></div><div class="form-field"><label for="propArea">محله</label><input class="field" id="propArea" placeholder="مثلاً خانی‌آباد نو"></div><div class="form-field"><label for="propSize">متراژ</label><input class="field" id="propSize" type="number" min="1" placeholder="متر مربع"></div><div class="form-field"><label for="propRooms">تعداد اتاق</label><input class="field" id="propRooms" type="number" min="0"></div><div class="form-field"><label for="propPrice">قیمت (تومان)</label><input class="field" id="propPrice" inputmode="numeric"></div><div class="form-field"><label for="propStatus">وضعیت</label><select class="field" id="propStatus"><option>فعال</option><option>فوری</option><option>خصوصی</option></select></div></div><div class="form-actions"><button class="primary" onclick="openRecordForm('property')">ادامه در فرم کامل فایل ملکی</button></div><div id="localPropertyList" class="quick-grid" style="margin-top:15px"></div></div>
 </section>
 <section class="page" id="page-performance"><div class="panel"><div class="panel-title"><h3>عملکرد من</h3><span>آمار مبتنی بر CRM</span></div><div id="perfStats" class="quick-grid"></div></div></section>
-<section class="page" id="page-admin"><div class="citizen-note">این صفحه به‌تنهایی احراز هویت مدیریتی ندارد. دسترسی مدیر باید در سرور و بر اساس هویت تأییدشده کنترل شود؛ مخفی‌کردن دکمه در مرورگر، کنترل امنیتی محسوب نمی‌شود.</div><div class="panel"><div class="panel-title"><h3>داشبورد مدیریتی</h3><span class="badge red">نیازمند احراز هویت سرور</span></div><div class="empty"><div><div class="empty-icon">▣</div>برای جلوگیری از افشای اطلاعات تیم، داشبورد تا راه‌اندازی احراز هویت و مجوزهای سمت سرور غیرفعال است.</div></div></div></section>
+<section class="page" id="page-admin"><div class="panel"><div class="panel-title"><h3>داشبورد مدیریتی</h3><span>فقط مدیر</span></div><div id="adminDash" class="empty">در حال بارگذاری…</div></div></section>
 <section class="page" id="page-citizen"><div class="citizen-note">بخش عمومی شهروند: هیچ نام یا شمارهٔ مالک، نشانی دقیق، شناسهٔ داخلی، لینک منبع خصوصی یا یادداشت مشاور نباید به مرورگر عمومی ارسال شود. این فیلتر باید در API سمت سرور اعمال شود.</div><div class="panel"><div class="panel-title"><h3>جست‌وجوی ملک</h3><span>نمایش عمومی</span></div><div class="form-grid"><div class="form-field"><label>محله</label><select id="srchArea" class="field"><option value="">همه محله‌ها</option><option>خانی‌آباد نو شمالی</option><option>خانی‌آباد نو جنوبی</option><option>شریعتی</option><option>بوستان شمالی</option><option>بوستان جنوبی</option></select></div><div class="form-field"><label>نوع ملک</label><select id="srchType" class="field"><option value="">همه انواع</option><option>آپارتمان</option><option>خانه</option><option>زمین</option><option>کلنگی</option></select></div><div class="form-field"><label>حداقل قیمت (تومان)</label><input id="srchMin" class="field" inputmode="numeric" placeholder="حداقل"></div><div class="form-field"><label>حداکثر قیمت (تومان)</label><input id="srchMax" class="field" inputmode="numeric" placeholder="حداکثر"></div><div class="form-field"><label>حداقل متراژ</label><input id="srchSqm" class="field" inputmode="numeric" placeholder="متر مربع"></div><div class="form-field"><label>اتاق</label><select id="srchRooms" class="field"><option value="">فرقی ندارد</option><option>بدون اتاق</option><option>۱</option><option>۲</option><option>۳+</option></select></div></div><div class="form-actions"><button class="primary" onclick="searchCitizenProperties()">جست‌وجوی ملک</button></div><div class="empty"><div><div class="empty-icon">⌕</div>هنوز فایل عمومی برای نمایش بارگذاری نشده است.</div></div></div></section>
 <footer>HOOMAN · SHAHRDAR IRANZAMIN</footer></main></div>
 <nav class="mobile-nav" id="mobileNav"><button class="active" data-page="home"><span>⌂</span>خانه</button><button data-page="clients"><span>♙</span>مشتریان</button><button data-page="properties"><span>⌂</span>فایل‌ها</button><button data-page="quick"><span>✚</span>ثبت سریع</button><button data-page="mayor"><span>✧</span>شهردار</button><button data-page="citizen"><span>⌕</span>شهروند</button><button data-page="admin" class="mobile-admin" style="display:none"><span>⚙</span>مدیریت</button></nav>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
 const titles={home:'نمای کلی',clients:'مشتریان',properties:'فایل‌ها',quick:'ثبت سریع',matching:'پیشنهاد به مشتری',mayor:'شهردار ایران‌زمین',performance:'عملکرد من',admin:'داشبورد مدیریتی',citizen:'شهروند؛ جست‌وجوی ملک'};
-function openPage(key){if(!titles[key])return;if(key==='home'&&typeof refreshHome==='function')refreshHome();document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+key));document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===key));document.getElementById('pageTitle').textContent=key==='home'?(currentCrm?.name||''):titles[key];window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
+function openPage(key){if(!titles[key])return;if(key==='admin'&&typeof loadAdminDashboard==='function')loadAdminDashboard();if(key==='performance'&&typeof loadPerformance==='function')loadPerformance();if(key==='home'&&typeof refreshHome==='function')refreshHome();document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+key));document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===key));document.getElementById('pageTitle').textContent=key==='home'?(currentCrm?.name||''):titles[key];window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>openPage(b.dataset.page)));
 let toastTimer;function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500)}
 function toggleMayorForm(id){document.getElementById(id).classList.toggle('hidden');}
@@ -134,17 +134,19 @@ async function loadClients(){
  const profile=await getCrmProfile().catch(()=>null);
  const {data,error}=await visibleToProfile(saleOnlyQuery(shahrdarAuth.from('clients').select('id,name,phone,area,max_budget,status,description,created_at,deal_type,ownership_type,owner_user_id,is_urgent')),profile).order('created_at',{ascending:false}).limit(300);
  if(error){host.textContent='دریافت مشتریان انجام نشد؛ اتصال یا مجوز دسترسی را بررسی کن.';console.error('loadClients',error);return;}
- crmClientsCache=data||[];renderCrmTable('clientsList',crmClientsCache,[['name','نام مشتری'],['phone','تماس'],['area','محله'],['max_budget','حداکثر بودجه'],['status','وضعیت']],'clientSearch');
+ const staffNames=await getStaffNames(); (data||[]).forEach(r=>{r.responsible=staffNames[r.owner_user_id]||'—';});
+ crmClientsCache=data||[];renderCrmTable('clientsList',crmClientsCache,CLIENT_LIST_COLUMNS,'clientSearch');
 }
 async function loadProperties(){
  const host=document.getElementById('propertiesList');if(!host)return;host.innerHTML='<div class="empty">در حال بارگذاری فایل‌ها…</div>';
  const profile=await getCrmProfile().catch(()=>null);
  const {data,error}=await visibleToProfile(saleOnlyQuery(shahrdarAuth.from('properties').select('id,code,area,sqm,price,property_type,status,deal_type,created_at,ownership_type,owner_user_id,is_urgent')),profile).order('created_at',{ascending:false}).limit(300);
  if(error){host.textContent='دریافت فایل‌ها انجام نشد؛ اتصال یا مجوز دسترسی را بررسی کن.';console.error('loadProperties',error);return;}
- crmPropertiesCache=data||[];renderCrmTable('propertiesList',crmPropertiesCache,[['code','کد فایل'],['deal_type','نوع معامله'],['area','محله'],['sqm','متراژ'],['price','قیمت'],['status','وضعیت']],'propertySearch');
+ const staffNamesP=await getStaffNames(); (data||[]).forEach(r=>{r.responsible=staffNamesP[r.owner_user_id]||'—';});
+ crmPropertiesCache=data||[];renderCrmTable('propertiesList',crmPropertiesCache,PROPERTY_LIST_COLUMNS,'propertySearch');
 }
-document.getElementById('clientSearch')?.addEventListener('input',()=>renderCrmTable('clientsList',crmClientsCache,[['name','نام مشتری'],['phone','تماس'],['area','محله'],['max_budget','حداکثر بودجه'],['status','وضعیت']],'clientSearch'));
-document.getElementById('propertySearch')?.addEventListener('input',()=>renderCrmTable('propertiesList',crmPropertiesCache,[['code','کد فایل'],['deal_type','نوع معامله'],['area','محله'],['sqm','متراژ'],['price','قیمت'],['status','وضعیت']],'propertySearch'));
+document.getElementById('clientSearch')?.addEventListener('input',()=>renderCrmTable('clientsList',crmClientsCache,CLIENT_LIST_COLUMNS,'clientSearch'));
+document.getElementById('propertySearch')?.addEventListener('input',()=>renderCrmTable('propertiesList',crmPropertiesCache,PROPERTY_LIST_COLUMNS,'propertySearch'));
 
 let currentCrm=null;
 const FA_DIGITS='۰۱۲۳۴۵۶۷۸۹', AR_DIGITS='٠١٢٣٤٥٦٧٨٩';
@@ -196,10 +198,12 @@ async function saveClient(){
     ownership_type:'عمومی', elevator_pref:'ترجیحی', parking_pref:'ترجیحی', storage_pref:'مهم نیست', floor_pref:'مهم نیست',
     is_urgent:0, owner_user_id:profile.crmId, created_by:profile.telegramId, created_at:new Date().toISOString()
   };
-  const {error}=await shahrdarAuth.from('clients').insert(row);
+  const editId=(editingRecord&&editingRecord.table==='clients')?editingRecord.id:null;
+  const {error}= editId ? await shahrdarAuth.from('clients').update(editPatch(row)).eq('id',editId) : await shahrdarAuth.from('clients').insert(row);
   if(error){console.error('saveClient',error);return setRecordStatus('ذخیره مشتری انجام نشد؛ دسترسی یا اتصال را بررسی کن.',true);}
-  resetRecord(); setRecordStatus('مشتری با موفقیت ثبت شد.');
-  toast('مشتری ثبت شد.'); loadClients(); refreshHome();
+  const msg=editId?'تغییرات مشتری ذخیره شد.':'مشتری با موفقیت ثبت شد.';
+  resetRecord(); setRecordStatus(msg);
+  toast(msg); loadClients(); refreshHome();
 }
 function validPropertyForm(){
   const code=strVal('p_code'), deal=strVal('p_deal'), area=strVal('p_area'), addr=strVal('p_address');
@@ -222,11 +226,12 @@ async function saveProperty(){
   const err=validPropertyForm(); if(err) return setRecordStatus(err,true);
   const profile=await getCrmProfile();
   const code=strVal('p_code');
-  const {data:dup,error:dupErr}=await shahrdarAuth.from('properties').select('id').eq('code',code).limit(1);
+  const editId=(editingRecord&&editingRecord.table==='properties')?editingRecord.id:null;
+  const {data:dup,error:dupErr}= editId ? {data:[],error:null} : await shahrdarAuth.from('properties').select('id').eq('code',code).limit(1);
   if(dupErr) return setRecordStatus('بررسی کد فایل انجام نشد؛ دوباره تلاش کن.',true);
   if(dup&&dup.length) return setRecordStatus('کد فایل تکراری است؛ کد دیگری وارد کن.',true);
   const divar=divarDraft;
-  if(divar&&divar.token){
+  if(divar&&divar.token&&!editId){
     const {data:dupDivar,error:dupDivarErr}=await shahrdarAuth.from('properties').select('id,code').eq('divar_token',divar.token).limit(1);
     if(dupDivarErr) return setRecordStatus('بررسی آگهی دیوار انجام نشد؛ دوباره تلاش کن.',true);
     if(dupDivar&&dupDivar.length) return setRecordStatus('این آگهی دیوار قبلاً ثبت شده است (کد '+(dupDivar[0].code||'')+').',true);
@@ -244,14 +249,15 @@ async function saveProperty(){
     ownership_type:'عمومی', is_urgent:0, floor_label:'', convertible:'', lease_term:'', build_year:0, source:divar?'divar':'manual', source_url:divar?divar.url:null, divar_token:divar?divar.token:null,
     owner_user_id:profile.crmId, created_by:profile.telegramId, created_at:now, updated_at:now
   };
-  const {error}=await shahrdarAuth.from('properties').insert(row);
+  const {error}= editId ? await shahrdarAuth.from('properties').update(editPatch(row)).eq('id',editId) : await shahrdarAuth.from('properties').insert(row);
   if(error){console.error('saveProperty',error);return setRecordStatus('ذخیره فایل ملکی انجام نشد؛ دسترسی یا اتصال را بررسی کن.',true);}
-  resetRecord(); setRecordStatus('فایل ملکی با موفقیت ثبت شد.');
-  toast('فایل ملکی ثبت شد.'); loadProperties(); refreshHome();
+  const msg=editId?'تغییرات فایل ملکی ذخیره شد.':'فایل ملکی با موفقیت ثبت شد.';
+  resetRecord(); setRecordStatus(msg);
+  toast(msg); loadProperties(); refreshHome();
 }
 function submitRecord(){ return document.getElementById('recordType').value==='property' ? saveProperty() : saveClient(); }
 function resetRecord(){
-  divarDraft=null;
+  divarDraft=null; editingRecord=null;
   const du=document.getElementById('p_divarUrl'); if(du) du.value='';
   document.getElementById('clientForm')?.reset();
   document.getElementById('propertyForm')?.reset();
@@ -508,23 +514,156 @@ function startHomeAutoRefresh(){
   if(homeRefreshTimer) return;
   homeRefreshTimer=setInterval(()=>{ if(document.getElementById('page-home')?.classList.contains('active')) refreshHome(); },60000);
 }
+
+let editingRecord=null;
+let staffNamesCache=null;
+const CLIENT_LIST_COLUMNS=[['name','نام مشتری'],['phone','تماس'],['area','محله'],['max_budget','حداکثر بودجه'],['status','وضعیت'],['responsible','مسئول']];
+const PROPERTY_LIST_COLUMNS=[['code','کد فایل'],['deal_type','نوع معامله'],['area','محله'],['sqm','متراژ'],['price','قیمت'],['status','وضعیت'],['responsible','مسئول']];
+const CLIENT_FORM_MAP={recordTitle:'name',recordContact:'phone',recordArea:'area',c_deal:'deal_type',c_ptype:'property_type',c_bedrooms:'bedrooms',c_minSqm:'min_sqm',c_maxSqm:'max_sqm',c_minBudget:'min_budget',c_maxBudget:'max_budget',c_maxDeposit:'max_deposit',c_maxRent:'max_rent',c_status:'status',recordNote:'description'};
+const PROPERTY_FORM_MAP={p_deal:'deal_type',p_code:'code',p_area:'area',p_address:'address',p_sqm:'sqm',p_price:'price',p_deposit:'deposit',p_rent:'rent',p_ptype:'property_type',p_bedrooms:'bedrooms',p_floors:'floors',p_unitFloor:'unit_floor',p_unitsPerFloor:'units_per_floor',p_elevator:'elevator',p_parking:'parking',p_parkingType:'parking_type',p_storage:'storage',p_tenant:'tenant',p_vacancy:'vacancy_date',p_doc:'document_type',p_ownerName:'owner_name',p_ownerPhone:'owner_phone',p_status:'status',p_transaction:'transaction_value',p_desc:'description'};
+const EDIT_EXCLUDE=['owner_user_id','created_by','created_at','is_urgent','ownership_type','rent_type','source','source_url','divar_token','floor_label','convertible','lease_term','build_year','elevator_pref','parking_pref','storage_pref','floor_pref'];
+function editPatch(row){const out={};Object.keys(row).forEach(k=>{if(!EDIT_EXCLUDE.includes(k)) out[k]=row[k];});return out;}
+function canEditRow(d){
+  if(!currentCrm||!d) return false;
+  if(isManagerProfile(currentCrm)) return true;
+  return d.owner_user_id===currentCrm.crmId||d.created_by===currentCrm.telegramId;
+}
+function startEditRecord(table,data){
+  editingRecord={table,id:data.id};
+  divarDraft=null;
+  openRecordForm(table==='clients'?'client':'property');
+  const map=table==='clients'?CLIENT_FORM_MAP:PROPERTY_FORM_MAP;
+  Object.entries(map).forEach(([fid,col])=>{const el=document.getElementById(fid);if(!el) return;const v=data[col];el.value=(v===null||v===undefined||v===0)?'':String(v);});
+  setRecordStatus('حالت ویرایش: '+(table==='clients'?(data.name||'مشتری'):('فایل '+(data.code||'')))+' — بعد از تغییر دکمه ذخیره را بزن. برای لغو، صفحه را عوض کن.',false);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+async function getStaffNames(){
+  if(staffNamesCache) return staffNamesCache;
+  let rows=null;
+  try{const {data,error}=await shahrdarAuth.rpc('crm_staff_names'); if(!error&&data) rows=data;}catch(e){}
+  if(!rows){try{const {data}=await shahrdarAuth.from('users').select('id,name'); rows=data;}catch(e){}}
+  const map={}; (rows||[]).forEach(u=>{map[u.id]=u.name||'—';});
+  if(Object.keys(map).length) staffNamesCache=map;
+  return map;
+}
+function openListModal(title,def){
+  const back=document.createElement('div');back.className='modal-backdrop open';
+  back.onclick=e=>{if(e.target===back)back.remove();};
+  const box=document.createElement('div');box.className='modal';
+  const head=document.createElement('div');head.className='modal-head';
+  const h=document.createElement('h2');h.textContent=title;
+  const close=document.createElement('button');close.className='close';close.type='button';close.textContent='✕';close.onclick=()=>back.remove();
+  head.append(h,close);
+  const hostId=(def.table||'list')+'ModalHost'+Date.now();
+  const host=document.createElement('div');host.id=hostId;host.innerHTML='<div class="empty">در حال بارگذاری…</div>';
+  box.append(head,host);back.appendChild(box);document.body.appendChild(back);
+  (async()=>{
+    const {data,error}=await def.query();
+    if(error){host.innerHTML='<div class="empty">دریافت اطلاعات انجام نشد.</div>';return;}
+    const rows=data||[];
+    if(!rows.length){host.innerHTML='<div class="empty">موردی وجود ندارد.</div>';return;}
+    if(def.table){const names=await getStaffNames();rows.forEach(r=>{r.responsible=names[r.owner_user_id]||'—';});}
+    const cols=def.table==='clients'?CLIENT_LIST_COLUMNS:def.table==='properties'?PROPERTY_LIST_COLUMNS:(def.columns||Object.keys(rows[0]).filter(k=>k!=='id').slice(0,6).map(k=>[k,k]));
+    renderCrmTable(hostId,rows,cols,null);
+  })();
+}
+
+async function loadAdminDashboard(){
+  const host=document.getElementById('adminDash'); if(!host) return;
+  const profile=await getCrmProfile().catch(()=>null);
+  if(!profile||profile.role!=='مدیر'){host.className='empty';host.textContent='این بخش فقط برای مدیر است.';return;}
+  host.className='';host.innerHTML='<div class="empty">در حال بارگذاری…</div>';
+  const [cl,pr,names]=await Promise.all([
+    shahrdarAuth.from('clients').select('id,owner_user_id,is_urgent,status,created_by'),
+    shahrdarAuth.from('properties').select('id,owner_user_id,is_urgent,status,deal_type,created_by'),
+    getStaffNames()
+  ]);
+  if(cl.error||pr.error){host.textContent='دریافت اطلاعات داشبورد انجام نشد؛ دسترسی را بررسی کن.';return;}
+  const clients=cl.data||[], props=pr.data||[];
+  const urgentC=clients.filter(c=>Number(c.is_urgent)===1).length;
+  const urgentP=props.filter(p=>Number(p.is_urgent)===1).length;
+  const activeP=props.filter(p=>PROPERTY_ACTIVE_STATUSES.includes(p.status)).length;
+  const per={};
+  const bump=(id,key)=>{if(!id) return;per[id]=per[id]||{clients:0,props:0,urgent:0};per[id][key]++;};
+  clients.forEach(c=>{bump(c.owner_user_id,'clients');if(Number(c.is_urgent)===1) bump(c.owner_user_id,'urgent');});
+  props.forEach(p=>{bump(p.owner_user_id,'props');if(Number(p.is_urgent)===1) bump(p.owner_user_id,'urgent');});
+  host.innerHTML='';
+  const fmt=v=>Number(v).toLocaleString('fa-IR');
+  const stats=document.createElement('div');stats.className='stats';
+  [['مشتریان',clients.length],['فایل‌ها',props.length],['فایل‌های فعال',activeP],['موارد فوری',urgentC+urgentP]].forEach(([label,val])=>{
+    const a=document.createElement('article');a.className='stat';
+    a.innerHTML='<div class="stat-top"><span></span></div><strong></strong>';
+    a.querySelector('span').textContent=label; a.querySelector('strong').textContent=fmt(val);
+    stats.appendChild(a);
+  });
+  host.appendChild(stats);
+  const wrap=document.createElement('div');wrap.className='table-wrap';
+  const table=document.createElement('table');
+  table.innerHTML='<thead><tr><th>مشاور</th><th>مشتریان</th><th>فایل‌ها</th><th>فوری</th></tr></thead>';
+  const tbody=document.createElement('tbody');
+  Object.keys(per).sort((x,y)=>(names[x]||'').localeCompare(names[y]||'','fa')).forEach(id=>{
+    const r=per[id]; const tr=document.createElement('tr');
+    [names[id]||('شناسه '+id),fmt(r.clients),fmt(r.props),fmt(r.urgent)].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td);});
+    tbody.appendChild(tr);
+  });
+  if(!tbody.children.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=4;td.textContent='داده‌ای ثبت نشده است.';tr.appendChild(td);tbody.appendChild(tr);}
+  table.appendChild(tbody);wrap.appendChild(table);host.appendChild(wrap);
+  const bk=document.createElement('div');bk.className='panel';bk.style.marginTop='18px';
+  bk.innerHTML='<div class="panel-title"><h3>بکاپ اطلاعات</h3><span>فایل JSON</span></div><p class="notice">شامل مشتری‌ها، فایل‌ها، پیگیری‌ها، بازدیدها و لیست مشاوران است. فایل حاوی شماره تماس‌هاست؛ آن را امن نگه دار.</p>';
+  const btn=document.createElement('button');btn.className='primary';btn.type='button';btn.textContent='دانلود بکاپ اطلاعات';
+  btn.onclick=()=>downloadBackup(btn);
+  bk.appendChild(btn);host.appendChild(bk);
+}
+async function downloadBackup(btn){
+  btn.disabled=true; btn.textContent='در حال آماده‌سازی…';
+  try{
+    const [c,p,ac,v,u]=await Promise.all([
+      shahrdarAuth.from('clients').select('*'),
+      shahrdarAuth.from('properties').select('*'),
+      shahrdarAuth.from('activities').select('*'),
+      shahrdarAuth.from('visits').select('*'),
+      shahrdarAuth.from('users').select('id,name,role,telegram_id,can_sale,can_rent')
+    ]);
+    const failed=[c,p,ac,v,u].find(x=>x.error);
+    if(failed) throw failed.error;
+    const payload={exported_at:new Date().toISOString(),clients:c.data,properties:p.data,activities:ac.data,visits:v.data,users:u.data};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');link.href=url;link.download='shahrdar-backup-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast('بکاپ دانلود شد.');
+  }catch(err){console.error('backup',err);toast('بکاپ انجام نشد؛ دوباره تلاش کن.');}
+  finally{btn.disabled=false;btn.textContent='دانلود بکاپ اطلاعات';}
+}
 async function loadPerformance(){
   const host=document.getElementById('perfStats'); if(!host) return;
   const profile=await getCrmProfile().catch(()=>null);
   if(!profile){host.textContent='پروفایل CRM پیدا نشد.';return;}
-  const count=async(q)=>{const {count,error}=await q;if(error){console.error('perf',error);return '—';}return (count??0).toLocaleString('fa-IR');};
-  const items=[
-    ['مشتریان ثبت‌شده', await count(shahrdarAuth.from('clients').select('id',{count:'exact',head:true}).eq('created_by',profile.telegramId))],
-    ['فایل‌های ثبت‌شده', await count(shahrdarAuth.from('properties').select('id',{count:'exact',head:true}).eq('created_by',profile.telegramId))],
-    ['پیگیری‌ها', await count(shahrdarAuth.from('activities').select('id',{count:'exact',head:true}).eq('user_id',profile.crmId).eq('activity_type','پیگیری'))],
-    ['بازدیدها', await count(shahrdarAuth.from('visits').select('id',{count:'exact',head:true}).eq('agent_id',profile.telegramId))]
+  const defs=[
+    {label:'مشتریان ثبت‌شده',table:'clients',count:()=>shahrdarAuth.from('clients').select('id',{count:'exact',head:true}).eq('created_by',profile.telegramId),
+     query:()=>shahrdarAuth.from('clients').select('id,name,phone,area,max_budget,status,created_at,deal_type,ownership_type,owner_user_id,is_urgent,created_by').eq('created_by',profile.telegramId).order('created_at',{ascending:false})},
+    {label:'فایل‌های ثبت‌شده',table:'properties',count:()=>shahrdarAuth.from('properties').select('id',{count:'exact',head:true}).eq('created_by',profile.telegramId),
+     query:()=>shahrdarAuth.from('properties').select('id,code,area,sqm,price,property_type,status,deal_type,created_at,ownership_type,owner_user_id,is_urgent,created_by').eq('created_by',profile.telegramId).order('created_at',{ascending:false})},
+    {label:'پیگیری‌ها',table:null,columns:[['created_at','تاریخ'],['note','یادداشت']],count:()=>shahrdarAuth.from('activities').select('id',{count:'exact',head:true}).eq('user_id',profile.crmId).eq('activity_type','پیگیری'),
+     query:()=>shahrdarAuth.from('activities').select('id,note,created_at').eq('user_id',profile.crmId).eq('activity_type','پیگیری').order('created_at',{ascending:false})},
+    {label:'بازدیدها',table:null,count:()=>shahrdarAuth.from('visits').select('id',{count:'exact',head:true}).eq('agent_id',profile.telegramId),
+     query:()=>shahrdarAuth.from('visits').select('*').eq('agent_id',profile.telegramId)}
   ];
+  const counts=await Promise.all(defs.map(async d=>{const {count,error}=await d.count();if(error){console.error('perf',error);return 0;}return count??0;}));
   host.innerHTML='';
-  items.forEach(([label,val])=>{const d=document.createElement('article');d.className='quick';const v=document.createElement('strong');v.textContent=val;v.style.fontSize='22px';const l=document.createElement('small');l.textContent=label;d.append(v,document.createElement('br'),l);host.appendChild(d);});
+  defs.forEach((d,i)=>{
+    const btn=document.createElement('button');btn.type='button';btn.className='quick';btn.style.cursor='pointer';
+    const v=document.createElement('strong');v.textContent=counts[i].toLocaleString('fa-IR');v.style.fontSize='22px';
+    const l=document.createElement('small');l.textContent=d.label+' · برای دیدن بزنید';
+    btn.append(v,document.createElement('br'),l);
+    btn.onclick=()=>openListModal(d.label,d);
+    host.appendChild(btn);
+  });
 }
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('stat-link')){e.preventDefault();e.target.click();}});
-const PROPERTY_LABELS={code:'کد فایل',deal_type:'نوع معامله',rent_type:'نوع اجاره',area:'محله',address:'آدرس',sqm:'متراژ',price:'قیمت فروش',deposit:'ودیعه',rent:'اجاره ماهانه',property_type:'نوع ملک',bedrooms:'اتاق',floors:'طبقات ساختمان',unit_floor:'طبقه واحد',elevator:'آسانسور',parking:'پارکینگ',parking_type:'نوع پارکینگ',storage:'انباری',tenant:'وضعیت تصرف',vacancy_date:'تاریخ تخلیه',document_type:'نوع سند',owner_name:'نام مالک',owner_phone:'تلفن مالک',description:'توضیحات',status:'وضعیت',transaction_value:'مبلغ معامله',created_at:'ثبت',updated_at:'آخرین ویرایش'};
-const CLIENT_LABELS={name:'نام',phone:'تماس',area:'محله',deal_type:'نوع معامله',property_type:'نوع ملک',bedrooms:'اتاق',min_sqm:'حداقل متراژ',max_sqm:'حداکثر متراژ',min_budget:'حداقل بودجه',max_budget:'حداکثر بودجه',max_deposit:'حداکثر ودیعه',max_rent:'حداکثر اجاره',description:'یادداشت',status:'وضعیت',created_at:'ثبت'};
+const PROPERTY_LABELS={responsible:'مسئول',code:'کد فایل',deal_type:'نوع معامله',rent_type:'نوع اجاره',area:'محله',address:'آدرس',sqm:'متراژ',price:'قیمت فروش',deposit:'ودیعه',rent:'اجاره ماهانه',property_type:'نوع ملک',bedrooms:'اتاق',floors:'طبقات ساختمان',unit_floor:'طبقه واحد',elevator:'آسانسور',parking:'پارکینگ',parking_type:'نوع پارکینگ',storage:'انباری',tenant:'وضعیت تصرف',vacancy_date:'تاریخ تخلیه',document_type:'نوع سند',owner_name:'نام مالک',owner_phone:'تلفن مالک',description:'توضیحات',status:'وضعیت',transaction_value:'مبلغ معامله',created_at:'ثبت',updated_at:'آخرین ویرایش'};
+const CLIENT_LABELS={responsible:'مسئول',name:'نام',phone:'تماس',area:'محله',deal_type:'نوع معامله',property_type:'نوع ملک',bedrooms:'اتاق',min_sqm:'حداقل متراژ',max_sqm:'حداکثر متراژ',min_budget:'حداقل بودجه',max_budget:'حداکثر بودجه',max_deposit:'حداکثر ودیعه',max_rent:'حداکثر اجاره',description:'یادداشت',status:'وضعیت',created_at:'ثبت'};
 function fmtDetail(key,v){
   if(v===null||v===undefined||v==='') return '—';
   if(key==='created_at'||key==='updated_at'||key==='urgent_at') return new Date(v).toLocaleString('fa-IR');
@@ -554,12 +693,13 @@ async function setRowUrgent(table,row,on){
   return true;
 }
 async function openRecordModal(hostId,row){
-  const table=hostId==='clientsList'?'clients':hostId==='propertiesList'?'properties':null;
+  const table=hostId.startsWith('clients')?'clients':hostId.startsWith('properties')?'properties':null;
   const labels=table==='clients'?CLIENT_LABELS:table==='properties'?PROPERTY_LABELS:null;
   let data=row;
   if(table && row.id!=null){
     const {data:full,error}=await shahrdarAuth.from(table).select('*').eq('id',row.id).single();
     if(!error && full) data=full;
+    data.responsible=(await getStaffNames())[data.owner_user_id]||'—';
   }
   const back=document.createElement('div');back.className='modal-backdrop open';
   back.onclick=e=>{if(e.target===back)back.remove();};
@@ -583,6 +723,7 @@ async function openRecordModal(hostId,row){
     const matchBox=document.createElement('div');matchBox.style.marginTop='14px';
     matchBtn.onclick=()=>loadMatches(table,data,matchBox);
     actions.append(urgentBtn,matchBtn);
+    if(canEditRow(data)){const editBtn=document.createElement('button');editBtn.className='ghost';editBtn.type='button';editBtn.textContent='ویرایش';editBtn.onclick=()=>{back.remove();startEditRecord(table,data);};actions.append(editBtn);}
     if(isUrgentRow(data)){
       if(data.follow_up_user_id==null){const claimBtn=document.createElement('button');claimBtn.className='primary';claimBtn.type='button';claimBtn.textContent='من پیگیری می‌کنم';claimBtn.onclick=async()=>{claimBtn.disabled=true;const ok=await claimFollowUp(table,data);if(ok){back.remove();loadUrgentFiles();loadUrgentClients();loadHomeStats();}else claimBtn.disabled=false;};actions.insertBefore(claimBtn,matchBtn);}
       else{const note=document.createElement('p');note.className='notice';note.textContent='📌 این مورد توسط یک مشاور پیگیری می‌شود.';box.appendChild(note);}
