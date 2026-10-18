@@ -543,6 +543,14 @@ async function setRowUrgent(table,row,on){
   const act={user_id:profile.crmId,property_id:table==='properties'?row.id:0,client_id:table==='clients'?row.id:0,activity_type:on?'فوری کردن':'عادی کردن',note:'',created_at:now};
   const {error:actErr}=await shahrdarAuth.from('activities').insert(act);
   if(actErr) console.error('urgent activity',actErr);
+  if(on){
+    shahrdarAuth.functions.invoke('urgent-notify',{body:{kind:table==='properties'?'p':'c',id:row.id}})
+      .then(({data:n,error:notifyErr})=>{
+        if(notifyErr||!n||n.error){console.error('urgent-notify',notifyErr||n);toast('فوری ثبت شد، ولی پیام تلگرام ارسال نشد.');return;}
+        toast('فوری ثبت شد؛ پیام به '+(n.sent||0).toLocaleString('fa-IR')+' نفر ارسال شد.');
+      })
+      .catch(err=>{console.error('urgent-notify',err);toast('فوری ثبت شد، ولی پیام تلگرام ارسال نشد.');});
+  }
   return true;
 }
 async function openRecordModal(hostId,row){
