@@ -103,7 +103,8 @@ document.getElementById('propertySearch')?.addEventListener('input',()=>renderCr
 
 let currentCrm=null;
 const FA_DIGITS='۰۱۲۳۴۵۶۷۸۹', AR_DIGITS='٠١٢٣٤٥٦٧٨٩';
-function normDigits(v){return String(v??'').trim().replace(/[۰-۹]/g,d=>FA_DIGITS.indexOf(d)).replace(/[٠-٩]/g,d=>AR_DIGITS.indexOf(d)).replace(/[,٬،\s]/g,'');}
+function normDigits(v){return String(v??'').trim().replace(/[۰-۹]/g,d=>FA_DIGITS.indexOf(d)).replace(/[٠-٩]/g,d=>AR_DIGITS.indexOf(d)).replace(/[٫]/g,'.').replace(/[\u200c\u200f\u200e]/g,'').replace(/[,٬،\s]/g,'');}
+function sqmOrZero(id){const raw=normDigits(document.getElementById(id)?.value).replace(/مترمربع|متر مربع|متر|m2|m²|sqm/gi,'');if(raw==='')return 0;const n=Number(raw);return Number.isFinite(n)?n:NaN;}
 function numOrZero(id){const v=normDigits(document.getElementById(id)?.value);if(v==='')return 0;const n=Number(v);return Number.isFinite(n)?n:NaN;}
 function strVal(id){return (document.getElementById(id)?.value||'').trim();}
 function setRecordStatus(msg,isError=false){const el=document.getElementById('recordFormStatus');if(el){el.textContent=msg;el.style.color=isError?'#ff9d9d':'var(--muted)';}}
@@ -165,7 +166,7 @@ function validPropertyForm(){
   if(!/^09\d{9}$/.test(ownerPhone)) return 'تلفن مالک باید با ۰۹ شروع شود و ۱۱ رقم باشد.';
   if(!strVal('p_desc')) return 'توضیحات ملک را وارد کن.';
   if(!strVal('p_vacancy')) return 'تاریخ تخلیه را وارد کن.';
-  const sqm=numOrZero('p_sqm'); if(!(sqm>0)) return 'متراژ باید بیشتر از صفر باشد.';
+  const sqm=sqmOrZero('p_sqm'); if(!(sqm>0)) return 'متراژ باید عدد بزرگ‌تر از صفر باشد (مثلاً ۹۰). مقدار فعلی: '+(document.getElementById('p_sqm')?.value||'خالی')+'';
   const nums=['p_price','p_deposit','p_rent','p_bedrooms','p_floors','p_unitFloor','p_unitsPerFloor','p_transaction'].map(numOrZero);
   if(nums.some(n=>Number.isNaN(n)||n<0)) return 'مقدارهای عددی را درست وارد کن.';
   if((deal==='فروش'||deal==='مشارکت در ساخت') && !(numOrZero('p_price')>0)) return 'برای فروش، قیمت را وارد کن.';
@@ -188,7 +189,7 @@ async function saveProperty(){
   const now=new Date().toISOString();
   const row={
     code, deal_type:strVal('p_deal'), rent_type:'', area:strVal('p_area'), address:strVal('p_address'),
-    sqm:numOrZero('p_sqm'), price:numOrZero('p_price'), deposit:numOrZero('p_deposit'), rent:numOrZero('p_rent'),
+    sqm:sqmOrZero('p_sqm'), price:numOrZero('p_price'), deposit:numOrZero('p_deposit'), rent:numOrZero('p_rent'),
     property_type:strVal('p_ptype')||'آپارتمان', bedrooms:numOrZero('p_bedrooms'), floors:numOrZero('p_floors'),
     unit_floor:numOrZero('p_unitFloor'), units_per_floor:numOrZero('p_unitsPerFloor'),
     elevator:strVal('p_elevator')||'ندارد', parking:strVal('p_parking')||'ندارد', parking_type:strVal('p_parkingType'),
