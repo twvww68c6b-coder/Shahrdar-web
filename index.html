@@ -625,7 +625,7 @@ function buildPhotoSection(code){
     }catch(err){console.error('photo upload',err);toast('ذخیره عکس انجام نشد.');}
     finally{upBtn.disabled=false;upBtn.textContent='+ افزودن عکس';input.value='';}
   };
-  wrap.append(head,strip,upBtn,input);
+  wrap.append(head,strip);
   renderStrip();
   return wrap;
 }
