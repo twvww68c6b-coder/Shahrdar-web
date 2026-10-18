@@ -264,7 +264,7 @@ async function loadHomeStats(){
 async function loadUrgentClients(){
   const host=document.getElementById('urgentClientList'); if(!host) return;
   const profile=await getCrmProfile().catch(()=>null);
-  const {data,error}=await visibleToProfile(saleOnlyQuery(shahrdarAuth.from('clients').select('id,name,phone,area,max_budget,status,urgent_at,deal_type,ownership_type,owner_user_id,follow_up_user_id').eq('is_urgent',1).in('status',['فعال'])),profile).order('urgent_at',{ascending:false}).limit(50);
+  const {data,error}=await visibleToProfile(saleOnlyQuery(shahrdarAuth.from('clients').select('id,name,phone,area,max_budget,status,urgent_at,deal_type,ownership_type,owner_user_id,follow_up_user_id').eq('is_urgent',1).in('status',['فعال'])),profile).order('urgent_at',{ascending:false}).limit(3);
   if(error){host.textContent='دریافت مشتریان فوری انجام نشد.';return;}
   if(!data||!data.length){host.className='empty';host.textContent='مشتری فوری‌ای وجود ندارد.';return;}
   host.className='';host.innerHTML='';
@@ -357,7 +357,7 @@ async function openRecordModal(hostId,row){
 async function loadUrgentFiles(){
   const host=document.getElementById('urgentFileList'); if(!host) return;
   const profile=await getCrmProfile().catch(()=>null);
-  const {data,error}=await visibleToProfile(shahrdarAuth.from('properties').select('id,code,area,sqm,price,deal_type,status,urgent_at,ownership_type,owner_user_id,follow_up_user_id').eq('is_urgent',1).eq('deal_type','فروش').in('status',PROPERTY_ACTIVE_STATUSES),profile).order('urgent_at',{ascending:false}).limit(50);
+  const {data,error}=await visibleToProfile(shahrdarAuth.from('properties').select('id,code,area,sqm,price,deal_type,status,urgent_at,ownership_type,owner_user_id,follow_up_user_id').eq('is_urgent',1).eq('deal_type','فروش').in('status',PROPERTY_ACTIVE_STATUSES),profile).order('urgent_at',{ascending:false}).limit(5);
   if(error){host.textContent='دریافت فایل‌های فوری انجام نشد.';return;}
   if(!data||!data.length){host.className='empty';host.textContent='فایل فوری فروشی وجود ندارد.';return;}
   host.className='';host.innerHTML='';
