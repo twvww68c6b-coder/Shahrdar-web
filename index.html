@@ -111,6 +111,7 @@ function previewProfile(input){
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const SHAH_SUPABASE_URL = 'https://igunsreoursotuxqpyfs.supabase.co';
 const SHAH_SUPABASE_KEY = 'sb_publishable_L4e1rhwOtFp8oHS5mGDDqQ_31PuzD29';
@@ -744,32 +745,54 @@ async function loadAdminDashboard(){
   if(!tbody.children.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=4;td.textContent='داده‌ای ثبت نشده است.';tr.appendChild(td);tbody.appendChild(tr);}
   table.appendChild(tbody);wrap.appendChild(table);host.appendChild(wrap);
   const bk=document.createElement('div');bk.className='panel';bk.style.marginTop='18px';
-  bk.innerHTML='<div class="panel-title"><h3>بکاپ اطلاعات</h3><span>فایل JSON</span></div><p class="notice">شامل مشتری‌ها، فایل‌ها، پیگیری‌ها، بازدیدها و لیست مشاوران است. فایل حاوی شماره تماس‌هاست؛ آن را امن نگه دار.</p>';
+  bk.innerHTML='<div class="panel-title"><h3>بکاپ اطلاعات</h3><span>فایل JSON یا Excel</span></div><p class="notice">شامل مشتری‌ها، فایل‌ها، پیگیری‌ها، بازدیدها و لیست مشاوران است. فایل حاوی شماره تماس‌هاست؛ آن را امن نگه دار.</p>';
   const btn=document.createElement('button');btn.className='primary';btn.type='button';btn.textContent='دانلود بکاپ اطلاعات';
   btn.onclick=()=>downloadBackup(btn);
-  bk.appendChild(btn);host.appendChild(bk);
+  const xbtn=document.createElement('button');xbtn.className='ghost';xbtn.type='button';xbtn.style.marginRight='8px';xbtn.textContent='دانلود بکاپ Excel';
+  xbtn.onclick=()=>downloadBackupExcel(xbtn);
+  bk.append(btn,xbtn);host.appendChild(bk);
 }
+async function fetchBackupPayload(){
+  const [c,p,ac,v,u]=await Promise.all([
+    shahrdarAuth.from('clients').select('*'),
+    shahrdarAuth.from('properties').select('*'),
+    shahrdarAuth.from('activities').select('*'),
+    shahrdarAuth.from('visits').select('*'),
+    shahrdarAuth.from('users').select('id,name,role,telegram_id,can_sale,can_rent')
+  ]);
+  const failed=[c,p,ac,v,u].find(x=>x.error);
+  if(failed) throw failed.error;
+  return {exported_at:new Date().toISOString(),clients:c.data,properties:p.data,activities:ac.data,visits:v.data,users:u.data};
+}
+function backupFileDate(){return new Date().toISOString().slice(0,10);}
 async function downloadBackup(btn){
   btn.disabled=true; btn.textContent='در حال آماده‌سازی…';
   try{
-    const [c,p,ac,v,u]=await Promise.all([
-      shahrdarAuth.from('clients').select('*'),
-      shahrdarAuth.from('properties').select('*'),
-      shahrdarAuth.from('activities').select('*'),
-      shahrdarAuth.from('visits').select('*'),
-      shahrdarAuth.from('users').select('id,name,role,telegram_id,can_sale,can_rent')
-    ]);
-    const failed=[c,p,ac,v,u].find(x=>x.error);
-    if(failed) throw failed.error;
-    const payload={exported_at:new Date().toISOString(),clients:c.data,properties:p.data,activities:ac.data,visits:v.data,users:u.data};
+    const payload=await fetchBackupPayload();
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob);
-    const link=document.createElement('a');link.href=url;link.download='shahrdar-backup-'+new Date().toISOString().slice(0,10)+'.json';
+    const link=document.createElement('a');link.href=url;link.download='shahrdar-backup-'+backupFileDate()+'.json';
     document.body.appendChild(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-    toast('بکاپ دانلود شد.');
+    toast('بکاپ JSON دانلود شد.');
   }catch(err){console.error('backup',err);toast('بکاپ انجام نشد؛ دوباره تلاش کن.');}
   finally{btn.disabled=false;btn.textContent='دانلود بکاپ اطلاعات';}
+}
+async function downloadBackupExcel(btn){
+  if(typeof XLSX==='undefined'){toast('کتابخانه Excel بارگذاری نشد؛ اتصال اینترنت را بررسی کن.');return;}
+  btn.disabled=true; const label=btn.textContent; btn.textContent='در حال آماده‌سازی…';
+  try{
+    const payload=await fetchBackupPayload();
+    const wb=XLSX.utils.book_new();
+    const sheets=[['مشتری‌ها',payload.clients],['فایل‌ها',payload.properties],['فعالیت‌ها',payload.activities],['بازدیدها',payload.visits],['مشاوران',payload.users]];
+    for(const [name,rows] of sheets){
+      const ws=XLSX.utils.json_to_sheet(Array.isArray(rows)&&rows.length?rows:[{'داده':'ثبت نشده'}]);
+      XLSX.utils.book_append_sheet(wb,ws,name);
+    }
+    XLSX.writeFile(wb,'shahrdar-backup-'+backupFileDate()+'.xlsx');
+    toast('بکاپ Excel دانلود شد.');
+  }catch(err){console.error('backup excel',err);toast('بکاپ Excel انجام نشد؛ دوباره تلاش کن.');}
+  finally{btn.disabled=false;btn.textContent=label;}
 }
 
 async function saveFollowUp(){
