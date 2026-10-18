@@ -59,7 +59,7 @@ body.auth-required .tg-login-screen{display:flex}
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
 const titles={home:'نمای کلی',clients:'مشتریان',properties:'فایل‌ها',quick:'ثبت سریع',matching:'پیشنهاد به مشتری',mayor:'شهردار ایران‌زمین',performance:'عملکرد من',admin:'داشبورد مدیریتی',citizen:'شهروند؛ جست‌وجوی ملک'};
-function openPage(key){if(!titles[key])return;if(key==='citizen')loadPropertyPhotos().then(()=>{if(typeof renderCitizenCard==='function'&&renderCitizenCard)renderCitizenCard();});if(key==='admin'&&typeof loadAdminDashboard==='function')loadAdminDashboard();if(key==='performance'&&typeof loadPerformance==='function')loadPerformance();if(key==='home'&&typeof refreshHome==='function')refreshHome();document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+key));document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===key));document.getElementById('pageTitle').textContent=key==='home'?(currentCrm?.name||''):titles[key];window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
+function openPage(key){if(!titles[key])return;if(key==='citizen'&&typeof renderCitizenCard==='function'&&renderCitizenCard)renderCitizenCard();if(key==='admin'&&typeof loadAdminDashboard==='function')loadAdminDashboard();if(key==='performance'&&typeof loadPerformance==='function')loadPerformance();if(key==='home'&&typeof refreshHome==='function')refreshHome();document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+key));document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===key));document.getElementById('pageTitle').textContent=key==='home'?(currentCrm?.name||''):titles[key];window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>openPage(b.dataset.page)));
 let toastTimer;function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500)}
 function toggleMayorForm(id){document.getElementById(id).classList.toggle('hidden');}
@@ -318,8 +318,6 @@ function demoPhotos(code){
   return [h,h+1,h+2].map(demoPhoto);
 }
 function photosOf(r){
-  const own=(propertyPhotos[r.code]||[]).map(x=>x.data);
-  if(own.length) return own;
   return Array.isArray(r.photos)&&r.photos.length ? r.photos : demoPhotos(r.code);
 }
 function stopCitizenTimer(){ clearInterval(citizenTimer); citizenTimer=null; }
@@ -520,150 +518,6 @@ function startHomeAutoRefresh(){
 }
 
 
-let photoDb=null;
-let propertyPhotos={};
-function openMediaDb(){
-  return new Promise((res,rej)=>{
-    if(photoDb) return res(photoDb);
-    const req=indexedDB.open('shahrdar-media',1);
-    req.onupgradeneeded=()=>{const st=req.result.createObjectStore('photos',{keyPath:'id',autoIncrement:true});st.createIndex('code','code');};
-    req.onsuccess=()=>{photoDb=req.result;res(photoDb);};
-    req.onerror=()=>rej(req.error);
-  });
-}
-async function dbAllPhotos(){
-  const db=await openMediaDb();
-  return new Promise((res,rej)=>{const r=db.transaction('photos').objectStore('photos').getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);});
-}
-async function dbAddPhoto(rec){
-  const db=await openMediaDb();
-  return new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite');const r=tx.objectStore('photos').add(rec);tx.oncomplete=()=>res(r.result);tx.onerror=()=>rej(tx.error);});
-}
-async function dbDeletePhoto(id){
-  const db=await openMediaDb();
-  return new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});
-}
-async function loadPropertyPhotos(){
-  try{
-    const all=await dbAllPhotos();
-    const map={};
-    all.sort((a,b)=>a.id-b.id).forEach(r=>{(map[r.code]=map[r.code]||[]).push({id:r.id,data:r.data});});
-    propertyPhotos=map;
-  }catch(e){console.error('photos',e);}
-}
-function readImageAsJpeg(file,maxW=1280){
-  return new Promise((res,rej)=>{
-    const fr=new FileReader();
-    fr.onload=()=>{
-      const img=new Image();
-      img.onload=()=>{
-        const sc=Math.min(1,maxW/img.width);
-        const c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
-        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-        res(c.toDataURL('image/jpeg',0.85));
-      };
-      img.onerror=()=>rej(new Error('bad image'));
-      img.src=fr.result;
-    };
-    fr.onerror=()=>rej(fr.error);
-    fr.readAsDataURL(file);
-  });
-}
-function openLightbox(list,start){
-  let idx=start;
-  const back=document.createElement('div');back.className='lightbox';
-  back.innerHTML='<button type="button" class="lb-btn lb-close" data-act="close">✕ بستن</button><button type="button" class="lb-btn lb-nav lb-prev" data-d="-1">‹</button><img class="lb-img" alt="عکس ملک"><button type="button" class="lb-btn lb-nav lb-next" data-d="1">›</button>';
-  const img=back.querySelector('.lb-img');
-  const show=()=>{img.src=list[idx];};
-  show();
-  const esc=e=>{if(e.key==='Escape'){back.remove();document.removeEventListener('keydown',esc);}};
-  document.addEventListener('keydown',esc);
-  back.addEventListener('click',e=>{
-    if(e.target===back||e.target.dataset.act==='close'){back.remove();document.removeEventListener('keydown',esc);return;}
-    if(e.target.dataset.d){idx=(idx+Number(e.target.dataset.d)+list.length)%list.length;show();}
-  });
-  document.body.appendChild(back);
-}
-function buildPhotoSection(code){
-  const wrap=document.createElement('div');wrap.className='photo-section';
-  const head=document.createElement('div');head.className='panel-title';head.innerHTML='<h3>عکس‌های ملک</h3><span>روی همین دستگاه ذخیره می‌شود</span>';
-  const strip=document.createElement('div');strip.className='photo-strip';
-  const upBtn=document.createElement('button');upBtn.className='primary';upBtn.type='button';upBtn.textContent='+ افزودن عکس';
-  const input=document.createElement('input');input.type='file';input.accept='image/*';input.multiple=true;input.className='hidden';
-  upBtn.onclick=()=>input.click();
-  const renderStrip=()=>{
-    strip.innerHTML='';
-    const list=propertyPhotos[code]||[];
-    if(!list.length){strip.innerHTML='<div class="notice" style="margin:0">هنوز عکسی برای این فایل ثبت نشده است.</div>';return;}
-    const urls=list.map(x=>x.data);
-    list.forEach((ph,i)=>{
-      const cell=document.createElement('div');cell.className='photo-cell';
-      const im=document.createElement('img');im.src=ph.data;im.alt='عکس ملک';im.className='photo-thumb';
-      im.onclick=()=>openLightbox(urls,i);
-      const del=document.createElement('button');del.type='button';del.className='photo-del';del.textContent='×';del.title='حذف عکس';
-      del.onclick=async()=>{
-        if(!confirm('این عکس حذف شود؟')) return;
-        try{await dbDeletePhoto(ph.id);await loadPropertyPhotos();renderStrip();if(typeof renderCitizenCard==='function'&&renderCitizenCard)renderCitizenCard();toast('عکس حذف شد.');}
-        catch(err){console.error('photo delete',err);toast('حذف عکس انجام نشد.');}
-      };
-      cell.append(im,del);strip.appendChild(cell);
-    });
-  };
-  input.onchange=async()=>{
-    const files=[...input.files];
-    if(!files.length) return;
-    upBtn.disabled=true;upBtn.textContent='در حال ذخیره…';
-    try{
-      for(const f of files){
-        if(!f.type.startsWith('image/')) continue;
-        const data=await readImageAsJpeg(f);
-        await dbAddPhoto({code,data,created_at:new Date().toISOString()});
-      }
-      await loadPropertyPhotos();renderStrip();
-      if(typeof renderCitizenCard==='function'&&renderCitizenCard) renderCitizenCard();
-      toast('عکس ذخیره شد.');
-    }catch(err){console.error('photo upload',err);toast('ذخیره عکس انجام نشد.');}
-    finally{upBtn.disabled=false;upBtn.textContent='+ افزودن عکس';input.value='';}
-  };
-  wrap.append(head,strip);
-  renderStrip();
-  return wrap;
-}
-
-async function exportPhotoBundle(){
-  try{
-    await loadPropertyPhotos();
-    const all=Object.keys(propertyPhotos).flatMap(code=>propertyPhotos[code].map(x=>({code,data:x.data})));
-    if(!all.length){toast('عکسی برای دانلود وجود ندارد.');return;}
-    const bundle={type:'shahrdar-photos',version:1,exported_at:new Date().toISOString(),photos:all};
-    const blob=new Blob([JSON.stringify(bundle)],{type:'application/json'});
-    const url=URL.createObjectURL(blob);
-    const link=document.createElement('a');link.href=url;link.download='shahrdar-photos-'+new Date().toISOString().slice(0,10)+'.json';
-    document.body.appendChild(link);link.click();link.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1000);
-    toast('فایل عکس‌ها دانلود شد ('+all.length.toLocaleString('fa-IR')+' عکس).');
-  }catch(err){console.error('photo export',err);toast('دانلود عکس‌ها انجام نشد.');}
-}
-async function importPhotoBundle(input){
-  const file=input.files&&input.files[0]; if(!file) return;
-  try{
-    const bundle=JSON.parse(await file.text());
-    if(!bundle||bundle.type!=='shahrdar-photos'||!Array.isArray(bundle.photos)) throw new Error('bad bundle');
-    await loadPropertyPhotos();
-    let added=0;
-    for(const item of bundle.photos){
-      if(!item||!item.code||typeof item.data!=='string'||!item.data.startsWith('data:image/')) continue;
-      const exists=(propertyPhotos[item.code]||[]).some(x=>x.data===item.data);
-      if(exists) continue;
-      await dbAddPhoto({code:String(item.code),data:item.data,created_at:new Date().toISOString()});
-      added++;
-    }
-    await loadPropertyPhotos();
-    if(typeof renderCitizenCard==='function'&&renderCitizenCard) renderCitizenCard();
-    toast(added?(''+added.toLocaleString('fa-IR')+' عکس وارد شد.'):'عکس جدیدی در فایل نبود.');
-  }catch(err){console.error('photo import',err);toast('فایل عکس‌ها معتبر نیست یا وارد نشد.');}
-  finally{input.value='';}
-}
 let editingRecord=null;
 let staffNamesCache=null;
 const CLIENT_LIST_COLUMNS=[['name','نام مشتری'],['phone','تماس'],['area','محله'],['max_budget','حداکثر بودجه'],['status','وضعیت'],['responsible','مسئول']];
@@ -906,7 +760,6 @@ async function openRecordModal(hostId,row){
     }
     box.append(actions,matchBox);
   }
-  if(table==='properties'&&data.code) box.appendChild(buildPhotoSection(data.code));
   back.appendChild(box);document.body.appendChild(back);
 }
 async function loadUrgentFiles(){
@@ -1092,7 +945,6 @@ function applyLoggedInUser(profile){
   loadOldFiles();
   startHomeAutoRefresh();
   loadSavedAvatar();
-  loadPropertyPhotos();
 }
 async function signInWithUsername(username, password){
   const {data:email,error:lookupError}=await shahrdarAuth.rpc('web_login_email',{p_username:username});
