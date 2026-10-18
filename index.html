@@ -18,6 +18,7 @@ body.auth-required .tg-login-screen{display:flex}
 #tgLoginStatus{font-size:12px;line-height:1.9;color:var(--gold2);margin:18px 0 12px}
 .tg-login-card small{display:block;font-size:10px;line-height:1.9;color:var(--muted)}
 #logoutButton{border:1px solid #633b43;background:#2b171d;color:#ffb1b1;border-radius:12px;padding:10px 12px;font-size:12px}
+.slide-photo{position:relative}.slide-nophoto{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#f0d99f;background:#151e2b;font-size:14px}
 </style></head>
 <body class="auth-required">
 <div id="telegramLoginScreen" class="tg-login-screen">
@@ -294,31 +295,17 @@ function citizenFacts(r){
   ].filter(([,v])=>v!==null&&v!==undefined&&String(v).trim()!=='');
 }
 let citizenRows=[], citizenIdx=0, citizenPhoto=0, citizenTimer=null, citizenAutoOn=false;
-const demoCache={};
-function demoPhoto(seed){
-  const key=((seed%6)+6)%6; if(demoCache[key]) return demoCache[key];
-  const palettes=[['#1b2a44','#d8b56b','#0b1020'],['#2a2236','#f0d99f','#0a0a14'],['#14303a','#c9a25c','#06141a'],['#2b2420','#e7c77f','#120d09'],['#1d2b3a','#f0d99f','#081018'],['#33261a','#d8b56b','#0d0a06']];
-  const [top,glow,bottom]=palettes[key];
-  const cv=document.createElement('canvas'); cv.width=1200; cv.height=800;
-  const x=cv.getContext('2d');
-  const g=x.createLinearGradient(0,0,0,800); g.addColorStop(0,top); g.addColorStop(1,bottom); x.fillStyle=g; x.fillRect(0,0,1200,800);
-  const rg=x.createRadialGradient(900,220,20,900,220,460); rg.addColorStop(0,glow+'cc'); rg.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=rg; x.fillRect(0,0,1200,800);
-  for(let i=0;i<7;i++){
-    const w=120+((i*37)%90), h=260+((i*71)%240), bx=60+i*160;
-    x.fillStyle='rgba(8,12,20,.92)'; x.fillRect(bx,800-h,w,h);
-    for(let r=0;r*36<h-30;r++) for(let k=0;k*28<w-24;k++){
-      if(((r*7+k*3+i)%5)<2){ x.fillStyle='rgba(240,217,159,'+(0.25+((r+k)%3)*0.15)+')'; x.fillRect(bx+12+k*28,800-h+14+r*36,14,18); }
-    }
-  }
-  x.fillStyle='#05080d'; x.fillRect(0,720,1200,80);
-  const url=cv.toDataURL('image/jpeg',0.9); demoCache[key]=url; return url;
-}
-function demoPhotos(code){
-  const h=[...String(code||'x')].reduce((t,ch)=>t+ch.charCodeAt(0),0);
-  return [h,h+1,h+2].map(demoPhoto);
+const photoUrlsByCode={};
+const PHOTO_FN=SHAH_SUPABASE_URL+'/functions/v1/property-photos';
+function loadBotPhotos(code){
+  if(!code) return Promise.resolve([]);
+  return fetch(PHOTO_FN+'?code='+encodeURIComponent(code),{headers:{apikey:SHAH_SUPABASE_KEY}})
+    .then(r=>r.ok?r.json():{photos:[]})
+    .then(j=>{const urls=(j.photos||[]).map(p=>p.url);photoUrlsByCode[code]=urls;return urls;})
+    .catch(err=>{console.error('photos',err);return [];});
 }
 function photosOf(r){
-  return Array.isArray(r.photos)&&r.photos.length ? r.photos : demoPhotos(r.code);
+  return photoUrlsByCode[r.code]||[];
 }
 function stopCitizenTimer(){ clearInterval(citizenTimer); citizenTimer=null; }
 function startCitizenTimer(){ stopCitizenTimer(); if(citizenAutoOn) citizenTimer=setInterval(()=>citizenStep(1),4500); }
@@ -346,7 +333,8 @@ function renderCitizenSlides(host, rows){
   const img=document.createElement('img'); img.className='slide-img'; img.alt='تصویر ملک';
   const sweep=document.createElement('span'); sweep.className='slide-sweep';
   const pcount=document.createElement('span'); pcount.className='slide-pcount';
-  photo.append(img,sweep,pcount);
+  const noPhoto=document.createElement('div'); noPhoto.className='slide-nophoto';
+  photo.append(img,sweep,pcount,noPhoto);
   const openFull=()=>{stopCitizenTimer();openCustomerView(citizenIdx,citizenPhoto);};
   photo.onclick=openFull; photo.onkeydown=e=>{if(e.key==='Enter')openFull();};
   const nav=document.createElement('div'); nav.className='slide-nav';
@@ -360,9 +348,16 @@ function renderCitizenSlides(host, rows){
   showBtn.onclick=openFull;
   renderCitizenCard=()=>{
     const r=rows[citizenIdx]; const ph=photosOf(r);
-    img.src=ph[citizenPhoto];
+    if(citizenPhoto>=ph.length) citizenPhoto=Math.max(0,ph.length-1);
+    if(ph.length){
+      img.src=ph[citizenPhoto]; img.style.display=''; noPhoto.style.display='none';
+      pcount.textContent=(citizenPhoto+1)+' / '+ph.length;
+    } else {
+      img.removeAttribute('src'); img.style.display='none';
+      noPhoto.textContent=(r.code in photoUrlsByCode)?'عکسی برای این فایل ثبت نشده':'در حال بارگذاری عکس…';
+      noPhoto.style.display='flex'; pcount.textContent='';
+    }
     photo.classList.remove('light'); void photo.offsetWidth; photo.classList.add('light');
-    pcount.textContent=(citizenPhoto+1)+' / '+ph.length;
     card.querySelector('.slide-body')?.remove();
     const body=document.createElement('div'); body.className='slide-body';
     const h=document.createElement('h3'); h.textContent=(r.property_type||'ملک')+' در '+(r.area||'—');
@@ -381,6 +376,15 @@ function renderCitizenSlides(host, rows){
   host.append(wrap);
   renderCitizenCard();
   startCitizenTimer();
+  preloadCitizenPhotos(rows);
+}
+function preloadCitizenPhotos(rows){
+  const codes=[...new Set(rows.map(r=>r.code).filter(Boolean))];
+  Promise.all(codes.map(c=>loadBotPhotos(c))).then(()=>{
+    if(rows!==citizenRows) return;
+    if(renderCitizenCard) renderCitizenCard();
+    if(cvEl&&cvEl.classList.contains('open')) renderCustomerView();
+  });
 }
 let cvEl=null, cvTimer=null;
 function buildCustomerView(){
@@ -411,8 +415,9 @@ function buildCustomerView(){
 function renderCustomerView(){
   const r=citizenRows[citizenIdx]; if(!r) return;
   const ph=photosOf(r);
+  if(citizenPhoto>=ph.length) citizenPhoto=Math.max(0,ph.length-1);
   const bg=document.getElementById('cvBg');
-  bg.style.backgroundImage='url("'+ph[citizenPhoto]+'")';
+  bg.style.backgroundImage=ph.length?'url("'+ph[citizenPhoto]+'")':'none';
   bg.classList.remove('zoom'); void bg.offsetWidth; bg.classList.add('zoom');
   document.getElementById('cvTitle').textContent=(r.property_type||'ملک')+' در '+(r.area||'—');
   document.getElementById('cvCode').textContent='کد فایل: '+(r.code||'—');
@@ -518,6 +523,68 @@ function startHomeAutoRefresh(){
 }
 
 
+
+let imgViewer=null;
+function openImageViewer(urls,start){
+  if(!urls||!urls.length) return;
+  if(!imgViewer){
+    imgViewer=document.createElement('div');
+    imgViewer.setAttribute('style','position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.94);display:none;flex-direction:column');
+    imgViewer.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px"><button type="button" class="ghost" data-iv="close">✕ بستن</button><span id="ivCount" style="color:#f0d99f"></span></div>'
+      +'<div id="ivStage" style="flex:1;overflow:auto;display:flex;align-items:center;justify-content:center"><img id="ivImg" alt="عکس ملک" style="max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in"></div>'
+      +'<div style="display:flex;justify-content:center;gap:10px;padding:12px"><button type="button" class="ghost" data-iv="prev">قبلی</button><button type="button" class="ghost" data-iv="zoom">بزرگ‌نمایی</button><button type="button" class="ghost" data-iv="next">بعدی</button></div>';
+    document.body.appendChild(imgViewer);
+    const step=d=>{imgViewer._i=(imgViewer._i+d+imgViewer._urls.length)%imgViewer._urls.length;ivRender();};
+    imgViewer.addEventListener('click',e=>{
+      const t=e.target.closest('[data-iv]');
+      if(t){const a=t.dataset.iv;
+        if(a==='close') return ivClose();
+        if(a==='prev') return step(-1);
+        if(a==='next') return step(1);
+        if(a==='zoom') return ivZoom();
+      }
+      if(e.target.id==='ivImg') ivZoom();
+    });
+    document.addEventListener('keydown',e=>{
+      if(!imgViewer||imgViewer.style.display!=='flex') return;
+      if(e.key==='Escape') ivClose();
+      if(e.key==='ArrowLeft') step(1);
+      if(e.key==='ArrowRight') step(-1);
+    });
+  }
+  imgViewer._urls=urls; imgViewer._i=start||0; imgViewer._zoom=false;
+  imgViewer.style.display='flex'; document.body.style.overflow='hidden';
+  ivRender();
+}
+function ivRender(){
+  const img=document.getElementById('ivImg');
+  img.src=imgViewer._urls[imgViewer._i];
+  img.style.maxWidth=imgViewer._zoom?'none':'100%';
+  img.style.maxHeight=imgViewer._zoom?'none':'100%';
+  img.style.width=imgViewer._zoom?'250%':'';
+  img.style.cursor=imgViewer._zoom?'zoom-out':'zoom-in';
+  document.getElementById('ivCount').textContent=(imgViewer._i+1)+' از '+imgViewer._urls.length;
+}
+function ivZoom(){imgViewer._zoom=!imgViewer._zoom;ivRender();}
+function ivClose(){imgViewer.style.display='none';document.body.style.overflow='';}
+function buildBotPhotoSection(code){
+  const wrap=document.createElement('div');wrap.style.cssText='margin:14px 0';
+  const title=document.createElement('div');title.className='notice';title.style.margin='0 0 8px';title.textContent='عکس‌های ملک';
+  const strip=document.createElement('div');strip.style.cssText='display:flex;gap:8px;overflow-x:auto;padding-bottom:6px';
+  strip.innerHTML='<div class="notice" style="margin:0">در حال بارگذاری…</div>';
+  wrap.append(title,strip);
+  loadBotPhotos(code).then(urls=>{
+    strip.innerHTML='';
+    if(!urls.length){strip.innerHTML='<div class="notice" style="margin:0">هنوز عکسی برای این فایل ثبت نشده است.</div>';return;}
+    urls.forEach((u,i)=>{
+      const im=document.createElement('img');im.src=u;im.alt='عکس ملک';im.loading='lazy';
+      im.style.cssText='width:120px;height:90px;object-fit:cover;border-radius:12px;border:2px solid #d8b56b;cursor:zoom-in;flex:0 0 auto';
+      im.onclick=()=>openImageViewer(urls,i);
+      strip.appendChild(im);
+    });
+  });
+  return wrap;
+}
 let editingRecord=null;
 let staffNamesCache=null;
 const CLIENT_LIST_COLUMNS=[['name','نام مشتری'],['phone','تماس'],['area','محله'],['max_budget','حداکثر بودجه'],['status','وضعیت'],['responsible','مسئول']];
@@ -758,6 +825,7 @@ async function openRecordModal(hostId,row){
       if(data.follow_up_user_id==null){const claimBtn=document.createElement('button');claimBtn.className='primary';claimBtn.type='button';claimBtn.textContent='من پیگیری می‌کنم';claimBtn.onclick=async()=>{claimBtn.disabled=true;const ok=await claimFollowUp(table,data);if(ok){back.remove();loadUrgentFiles();loadUrgentClients();loadHomeStats();}else claimBtn.disabled=false;};actions.insertBefore(claimBtn,matchBtn);}
       else{const note=document.createElement('p');note.className='notice';note.textContent='📌 این مورد توسط یک مشاور پیگیری می‌شود.';box.appendChild(note);}
     }
+    if(table==='properties'&&data.code) box.appendChild(buildBotPhotoSection(data.code));
     box.append(actions,matchBox);
   }
   back.appendChild(box);document.body.appendChild(back);
