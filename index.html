@@ -51,7 +51,7 @@ body.auth-required .tg-login-screen{display:flex}
 <div id="followFormPanel" class="panel hidden" style="margin-top:15px"><div class="panel-title"><h3>ثبت پیگیری</h3><span>ذخیره در CRM</span></div><div class="form-grid"><div class="form-field"><label for="followPerson">نام مشتری یا مسئول فایل</label><input class="field" id="followPerson" placeholder="نام"></div><div class="form-field"><label for="followKind">نوع پیگیری</label><select class="field" id="followKind"><option>تماس</option><option>بازدید</option><option>مذاکره</option><option>پیگیری قرارداد</option></select></div><div class="form-field"><label for="followDate">تاریخ پیگیری بعدی</label><input class="field" id="followDate" type="date"></div><div class="form-field"><label for="followNote">یادداشت</label><input class="field" id="followNote" placeholder="یادداشت اختیاری"></div></div><div class="form-actions"><button class="primary" onclick="addLocalFollow()">افزودن پیگیری</button></div><div id="followList" class="quick-grid" style="margin-top:15px"></div></div>
 <div id="propertyFormPanel" class="panel hidden" style="margin-top:15px"><div class="panel-title"><h3>ثبت فایل ملکی</h3><span>ذخیره در CRM</span></div><div class="form-grid"><div class="form-field"><label for="propDeal">نوع معامله</label><select class="field" id="propDeal"><option>فروش</option><option>اجاره</option><option>مشارکت در ساخت</option></select></div><div class="form-field"><label for="propArea">محله</label><input class="field" id="propArea" placeholder="مثلاً خانی‌آباد نو"></div><div class="form-field"><label for="propSize">متراژ</label><input class="field" id="propSize" type="number" min="1" placeholder="متر مربع"></div><div class="form-field"><label for="propRooms">تعداد اتاق</label><input class="field" id="propRooms" type="number" min="0"></div><div class="form-field"><label for="propPrice">قیمت (تومان)</label><input class="field" id="propPrice" inputmode="numeric"></div><div class="form-field"><label for="propStatus">وضعیت</label><select class="field" id="propStatus"><option>فعال</option><option>فوری</option><option>خصوصی</option></select></div></div><div class="form-actions"><button class="primary" onclick="openRecordForm('property')">ادامه در فرم کامل فایل ملکی</button></div><div id="localPropertyList" class="quick-grid" style="margin-top:15px"></div></div>
 </section>
-<section class="page" id="page-performance"><div class="panel"><div class="panel-title"><h3>عملکرد من</h3><span>آمار مبتنی بر CRM</span></div><div id="perfStats" class="quick-grid"></div></div></section>
+<section class="page" id="page-performance"><div class="panel"><div class="panel-title"><h3>عملکرد من</h3><span>آمار مبتنی بر CRM</span></div><div id="perfStats" class="quick-grid"></div></div><div class="panel" style="margin-top:15px"><div class="panel-title"><h3>ثبت پیگیری جدید</h3><span>در پیگیری‌های من ذخیره می‌شود</span></div><div class="form-grid"><div class="form-field"><label>مربوط به</label><select id="fuTarget" class="field"><option>کلی</option><option>فایل ملکی</option><option>مشتری</option></select></div><div class="form-field"><label>کد فایل یا نام مشتری</label><input id="fuRef" class="field" placeholder="مثلاً d 9 یا نام مشتری"></div><div class="form-field full"><label>شرح پیگیری *</label><textarea id="fuNote" class="field" rows="3" placeholder="مثلاً تماس گرفتم و قرار بازدید گذاشتیم"></textarea></div></div><div class="form-actions"><button class="primary" type="button" onclick="saveFollowUp()">ثبت پیگیری</button></div><p class="notice" id="fuStatus"></p></div></section>
 <section class="page" id="page-admin"><div class="panel"><div class="panel-title"><h3>داشبورد مدیریتی</h3><span>فقط مدیر</span></div><div id="adminDash" class="empty">در حال بارگذاری…</div></div></section>
 <section class="page" id="page-citizen"><div class="citizen-note">بخش عمومی شهروند: هیچ نام یا شمارهٔ مالک، نشانی دقیق، شناسهٔ داخلی، لینک منبع خصوصی یا یادداشت مشاور نباید به مرورگر عمومی ارسال شود. این فیلتر باید در API سمت سرور اعمال شود.</div><div class="panel"><div class="panel-title"><h3>جست‌وجوی ملک</h3><span>نمایش عمومی</span></div><div class="form-grid"><div class="form-field"><label>محله</label><select id="srchArea" class="field"><option value="">همه محله‌ها</option><option>خانی‌آباد نو شمالی</option><option>خانی‌آباد نو جنوبی</option><option>شریعتی</option><option>بوستان شمالی</option><option>بوستان جنوبی</option></select></div><div class="form-field"><label>نوع ملک</label><select id="srchType" class="field"><option value="">همه انواع</option><option>آپارتمان</option><option>خانه</option><option>زمین</option><option>کلنگی</option></select></div><div class="form-field"><label>حداقل قیمت (تومان)</label><input id="srchMin" class="field" inputmode="numeric" placeholder="حداقل"></div><div class="form-field"><label>حداکثر قیمت (تومان)</label><input id="srchMax" class="field" inputmode="numeric" placeholder="حداکثر"></div><div class="form-field"><label>حداقل متراژ</label><input id="srchSqm" class="field" inputmode="numeric" placeholder="متر مربع"></div><div class="form-field"><label>اتاق</label><select id="srchRooms" class="field"><option value="">فرقی ندارد</option><option>بدون اتاق</option><option>۱</option><option>۲</option><option>۳+</option></select></div></div><div class="form-actions"><button class="primary" onclick="searchCitizenProperties()">جست‌وجوی ملک</button></div><div class="empty"><div><div class="empty-icon">⌕</div>هنوز فایل عمومی برای نمایش بارگذاری نشده است.</div></div></div></section>
 <footer>HOOMAN · SHAHRDAR IRANZAMIN</footer></main></div>
@@ -784,6 +784,33 @@ async function downloadBackup(btn){
     toast('بکاپ دانلود شد.');
   }catch(err){console.error('backup',err);toast('بکاپ انجام نشد؛ دوباره تلاش کن.');}
   finally{btn.disabled=false;btn.textContent='دانلود بکاپ اطلاعات';}
+}
+
+async function saveFollowUp(){
+  const status=document.getElementById('fuStatus');
+  const note=(document.getElementById('fuNote').value||'').trim();
+  const target=document.getElementById('fuTarget').value;
+  const ref=(document.getElementById('fuRef').value||'').trim();
+  if(!note){status.textContent='شرح پیگیری را وارد کن.';return;}
+  if(target!=='کلی'&&!ref){status.textContent='کد فایل یا نام مشتری را وارد کن.';return;}
+  const profile=await getCrmProfile().catch(()=>null);
+  if(!profile){status.textContent='پروفایل پیدا نشد.';return;}
+  let propertyId=0, clientId=0;
+  if(target==='فایل ملکی'){
+    const {data,error}=await shahrdarAuth.from('properties').select('id').eq('code',ref).limit(1);
+    if(error||!data||!data.length){status.textContent='فایلی با این کد پیدا نشد.';return;}
+    propertyId=data[0].id;
+  }
+  if(target==='مشتری'){
+    const {data,error}=await shahrdarAuth.from('clients').select('id').eq('name',ref).limit(1);
+    if(error||!data||!data.length){status.textContent='مشتری با این نام پیدا نشد.';return;}
+    clientId=data[0].id;
+  }
+  const {error}=await shahrdarAuth.from('activities').insert({user_id:profile.crmId,property_id:propertyId,client_id:clientId,activity_type:'پیگیری',note,created_at:new Date().toISOString()});
+  if(error){console.error('followup',error);status.textContent='ثبت پیگیری انجام نشد؛ دسترسی یا اتصال را بررسی کن.';return;}
+  document.getElementById('fuNote').value='';document.getElementById('fuRef').value='';
+  status.textContent='پیگیری ثبت شد.';toast('پیگیری ثبت شد.');
+  loadPerformance();refreshHome();
 }
 async function loadPerformance(){
   const host=document.getElementById('perfStats'); if(!host) return;
