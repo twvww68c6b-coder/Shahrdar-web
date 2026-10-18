@@ -59,7 +59,7 @@ body.auth-required .tg-login-screen{display:flex}
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
 const titles={home:'نمای کلی',clients:'مشتریان',properties:'فایل‌ها',quick:'ثبت سریع',matching:'پیشنهاد به مشتری',mayor:'شهردار ایران‌زمین',performance:'عملکرد من',admin:'داشبورد مدیریتی',citizen:'شهروند؛ جست‌وجوی ملک'};
-function openPage(key){if(!titles[key])return;if(key==='home'&&typeof refreshHome==='function')refreshHome();document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+key));document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===key));document.getElementById('pageTitle').textContent=titles[key];window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
+function openPage(key){if(!titles[key])return;if(key==='home'&&typeof refreshHome==='function')refreshHome();document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+key));document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===key));document.getElementById('pageTitle').textContent=key==='home'?'':titles[key];window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>openPage(b.dataset.page)));
 let toastTimer;function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500)}
 function toggleMayorForm(id){document.getElementById(id).classList.toggle('hidden');}
