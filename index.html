@@ -55,7 +55,7 @@ body.auth-required .tg-login-screen{display:flex}
 <section class="page" id="page-admin"><div class="citizen-note">این صفحه به‌تنهایی احراز هویت مدیریتی ندارد. دسترسی مدیر باید در سرور و بر اساس هویت تأییدشده کنترل شود؛ مخفی‌کردن دکمه در مرورگر، کنترل امنیتی محسوب نمی‌شود.</div><div class="panel"><div class="panel-title"><h3>داشبورد مدیریتی</h3><span class="badge red">نیازمند احراز هویت سرور</span></div><div class="empty"><div><div class="empty-icon">▣</div>برای جلوگیری از افشای اطلاعات تیم، داشبورد تا راه‌اندازی احراز هویت و مجوزهای سمت سرور غیرفعال است.</div></div></div></section>
 <section class="page" id="page-citizen"><div class="citizen-note">بخش عمومی شهروند: هیچ نام یا شمارهٔ مالک، نشانی دقیق، شناسهٔ داخلی، لینک منبع خصوصی یا یادداشت مشاور نباید به مرورگر عمومی ارسال شود. این فیلتر باید در API سمت سرور اعمال شود.</div><div class="panel"><div class="panel-title"><h3>جست‌وجوی ملک</h3><span>نمایش عمومی</span></div><div class="form-grid"><div class="form-field"><label>محله</label><select id="srchArea" class="field"><option value="">همه محله‌ها</option><option>خانی‌آباد نو شمالی</option><option>خانی‌آباد نو جنوبی</option><option>شریعتی</option><option>بوستان شمالی</option><option>بوستان جنوبی</option></select></div><div class="form-field"><label>نوع ملک</label><select id="srchType" class="field"><option value="">همه انواع</option><option>آپارتمان</option><option>خانه</option><option>زمین</option><option>کلنگی</option></select></div><div class="form-field"><label>حداقل قیمت (تومان)</label><input id="srchMin" class="field" inputmode="numeric" placeholder="حداقل"></div><div class="form-field"><label>حداکثر قیمت (تومان)</label><input id="srchMax" class="field" inputmode="numeric" placeholder="حداکثر"></div><div class="form-field"><label>حداقل متراژ</label><input id="srchSqm" class="field" inputmode="numeric" placeholder="متر مربع"></div><div class="form-field"><label>اتاق</label><select id="srchRooms" class="field"><option value="">فرقی ندارد</option><option>بدون اتاق</option><option>۱</option><option>۲</option><option>۳+</option></select></div></div><div class="form-actions"><button class="primary" onclick="searchCitizenProperties()">جست‌وجوی ملک</button></div><div class="empty"><div><div class="empty-icon">⌕</div>هنوز فایل عمومی برای نمایش بارگذاری نشده است.</div></div></div></section>
 <footer>HOOMAN · SHAHRDAR IRANZAMIN</footer></main></div>
-<nav class="mobile-nav" id="mobileNav"><button class="active" data-page="home"><span>⌂</span>خانه</button><button data-page="clients"><span>♙</span>مشتریان</button><button data-page="properties"><span>⌂</span>فایل‌ها</button><button data-page="quick"><span>✚</span>ثبت سریع</button><button data-page="mayor"><span>✧</span>شهردار</button><button data-page="citizen"><span>⌕</span>شهروند</button></nav>
+<nav class="mobile-nav" id="mobileNav"><button class="active" data-page="home"><span>⌂</span>خانه</button><button data-page="clients"><span>♙</span>مشتریان</button><button data-page="properties"><span>⌂</span>فایل‌ها</button><button data-page="quick"><span>✚</span>ثبت سریع</button><button data-page="mayor"><span>✧</span>شهردار</button><button data-page="citizen"><span>⌕</span>شهروند</button><button data-page="admin" class="mobile-admin" style="display:none"><span>⚙</span>مدیریت</button></nav>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
 const titles={home:'نمای کلی',clients:'مشتریان',properties:'فایل‌ها',quick:'ثبت سریع',matching:'پیشنهاد به مشتری',mayor:'شهردار ایران‌زمین',performance:'عملکرد من',admin:'داشبورد مدیریتی',citizen:'شهروند؛ جست‌وجوی ملک'};
@@ -118,9 +118,9 @@ async function getCrmProfile(){
   if(userError||!userData||!userData.user) throw new Error('نشست ورود معتبر نیست؛ دوباره وارد شو.');
   const {data:link,error:linkError}=await shahrdarAuth.from('web_user_access').select('crm_user_id').eq('auth_user_id',userData.user.id).single();
   if(linkError||!link) throw new Error('این حساب به پروفایل CRM وصل نیست.');
-  const {data:crm,error:crmError}=await shahrdarAuth.from('users').select('id,telegram_id').eq('id',link.crm_user_id).single();
+  const {data:crm,error:crmError}=await shahrdarAuth.from('users').select('id,telegram_id,name,role').eq('id',link.crm_user_id).single();
   if(crmError||!crm||crm.telegram_id==null) throw new Error('پروفایل CRM این حساب کامل نیست.');
-  currentCrm={crmId:crm.id,telegramId:crm.telegram_id};
+  currentCrm={crmId:crm.id,telegramId:crm.telegram_id,name:crm.name||'',role:crm.role||''};
   return currentCrm;
 }
 function validClientForm(){
@@ -243,8 +243,7 @@ function tgStatus(message, isError=false){
 function applyLoggedInUser(profile){
   document.body.classList.remove('auth-required');
   document.body.dataset.crmRole = profile && profile.role ? profile.role : '';
-  const adminNav=document.querySelector('[data-page="admin"]');
-  if(adminNav) adminNav.style.display=(profile && profile.role==='مدیر')?'flex':'none';
+  document.querySelectorAll('[data-page="admin"]').forEach(el=>el.style.display=(profile && profile.role==='مدیر')?'':'none');
   const managerCards=document.querySelectorAll('[data-manager-only="true"]');
   managerCards.forEach(el=>el.style.display=(profile && profile.role==='مدیر')?'':'none');
   const title=document.querySelector('.topbar h1');
@@ -276,8 +275,9 @@ document.getElementById('usernameLoginForm')?.addEventListener('submit',async(ev
   tgStatus('در حال بررسی اطلاعات ورود…');
   try{
     const user=await signInWithUsername(username,password);
+    const profile=await getCrmProfile().catch(()=>null);
     const meta=user.user_metadata||{};
-    applyLoggedInUser({name:meta.name||'عضو ایران‌زمین',role:meta.role||''});
+    applyLoggedInUser({name:(profile&&profile.name)||meta.name||'عضو ایران‌زمین',role:(profile&&profile.role)||meta.role||''});
     form.reset();
     tgStatus('ورود موفق بود.');
   }catch(error){
@@ -291,8 +291,9 @@ async function restoreShahrdarSession(){
   if(error || !data.session) return;
   const {data:userData,error:userError}=await shahrdarAuth.auth.getUser();
   if(userError || !userData || !userData.user) return;
+  const profile=await getCrmProfile().catch(()=>null);
   const meta=userData.user.user_metadata||{};
-  applyLoggedInUser({name:meta.name||'عضو ایران‌زمین',role:meta.role||''});
+  applyLoggedInUser({name:(profile&&profile.name)||meta.name||'عضو ایران‌زمین',role:(profile&&profile.role)||meta.role||''});
 }
 document.getElementById('logoutButton')?.addEventListener('click',async()=>{
   await shahrdarAuth.auth.signOut();
