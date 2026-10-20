@@ -26,6 +26,8 @@ body.auth-required .tg-login-screen{display:flex}
 .sort-menu button:hover,.sort-menu button.on{background:var(--surface2);color:var(--gold2)}
 .row-menu{background:transparent;border:1px solid #6b5630;color:var(--gold2);border-radius:10px;width:34px;height:34px;font-size:18px;line-height:1;cursor:pointer}
 .row-menu:hover{border-color:var(--gold);background:var(--surface2)}
+.danger{border:1px solid #633b43;background:#2b171d;color:#ffb1b1;border-radius:12px;padding:10px 14px;font:inherit;cursor:pointer}
+.danger:disabled{opacity:.4;cursor:not-allowed}
 </style></head>
 <body class="auth-required">
 <div id="telegramLoginScreen" class="tg-login-screen">
@@ -199,11 +201,11 @@ function openSortMenu(kind,btn){
 }
 function openRowMenu(hostId,row,btn){
   document.getElementById('sortMenu')?.remove();
-  const isProp=hostId==='propertiesList';
+  const kind=hostId==='propertiesList'?'property':'client';
   const m=document.createElement('div'); m.id='sortMenu'; m.className='sort-menu';
-  const add=(label,fn,disabled)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.disabled=!!disabled;if(!disabled)b.onclick=()=>{m.remove();fn();};m.appendChild(b);};
-  if(isProp) add('↗️ اشتراک‌گذاری',()=>openPropertyShare(row.id));
-  else add('↗️ اشتراک‌گذاری (به‌زودی)',()=>{},true);
+  const add=(label,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>{m.remove();fn();};m.appendChild(b);};
+  add('↗️ اشتراک‌گذاری',()=>openShareModal(kind,row));
+  add('🗑️ حذف کامل',()=>openDeleteModal(kind,row));
   document.body.appendChild(m);
   const r=btn.getBoundingClientRect();
   m.style.top=(r.bottom+6)+'px';
@@ -211,6 +213,7 @@ function openRowMenu(hostId,row,btn){
   const close=(e)=>{if(!m.contains(e.target)){m.remove();document.removeEventListener('click',close,true);}};
   setTimeout(()=>document.addEventListener('click',close,true),0);
 }
+
 const SHARE_PUBLIC_FIELDS='id,code,deal_type,rent_type,property_type,area,sqm,bedrooms,floor_label,build_year,elevator,parking,storage,price,rent,deposit';
 function sharePublicLines(p){
   const fmt=(v)=>Number(v).toLocaleString('fa-IR')+' تومان';
@@ -223,27 +226,84 @@ function sharePublicLines(p){
   ];
   return lines.filter(([,v])=>v!==null&&v!==undefined&&String(v).trim()!=='' && String(v)!=='0');
 }
-async function openPropertyShare(id){
-  const {data:p,error}=await shahrdarAuth.from('properties').select(SHARE_PUBLIC_FIELDS).eq('id',id).single();
-  if(error||!p){toast('اطلاعات فایل برای اشتراک‌گذاری دریافت نشد.');return;}
-  const lines=sharePublicLines(p);
-  const text='🏢 شهردار ایران‌زمین\nمعرفی فایل ملک\n\n'+lines.map(([k,v])=>k+': '+v).join('\n')+'\n\n— نسخه عمومی: اطلاعات تماس مالک و آدرس دقیق ارائه نمی‌شوند.';
+const SHARE_CLIENT_FIELDS='id,name,phone,deal_type,property_type,area,min_sqm,max_sqm,min_budget,max_budget,bedrooms,max_deposit,max_rent';
+async function openShareModal(kind,row){
+  const isP=kind==='property';
   const back=document.createElement('div');back.className='modal-backdrop open';
   back.onclick=e=>{if(e.target===back)back.remove();};
   const box=document.createElement('div');box.className='modal';
   const head=document.createElement('div');head.className='modal-head';
-  const h=document.createElement('h2');h.textContent='اشتراک‌گذاری فایل '+(p.code||'');
+  const h=document.createElement('h2');h.textContent=(isP?'اشتراک‌گذاری فایل ':'اشتراک‌گذاری مشتری ')+(isP?(row.code||''):(row.name||''));
   const close=document.createElement('button');close.className='close';close.type='button';close.textContent='✕';close.onclick=()=>back.remove();
   head.append(h,close);
-  const type=document.createElement('p');type.className='notice';type.textContent='نوع اشتراک‌گذاری: نسخه عمومی (بدون نام و شماره مالک، بدون آدرس دقیق)';
-  const ta=document.createElement('textarea');ta.className='field';ta.rows=12;ta.readOnly=true;ta.value=text;ta.style.marginTop='12px';
+  const typeLbl=document.createElement('label');typeLbl.textContent='نوع اشتراک‌گذاری';
+  const typeSel=document.createElement('select');typeSel.className='field';
+  typeSel.innerHTML='<option value="public">نسخه عمومی (بدون نام، شماره و آدرس دقیق)</option><option value="full">نسخه کامل (فقط برای مشاور مجاز)</option>';
+  const recLbl=document.createElement('label');recLbl.textContent='گیرنده (مشاور)';recLbl.style.marginTop='10px';
+  const recSel=document.createElement('select');recSel.className='field';recSel.innerHTML='<option value="">در حال بارگذاری…</option>';
+  const status=document.createElement('p');status.className='notice';status.style.marginTop='12px';
   const acts=document.createElement('div');acts.className='form-actions';acts.style.marginTop='12px';
-  const mk=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=fn;return b;};
-  acts.append(
-    mk('کپی متن','ghost',async()=>{try{await navigator.clipboard.writeText(text);toast('متن کپی شد.');}catch(e){ta.select();toast('کپی خودکار انجام نشد؛ متن را انتخاب کن.');}}),
-    mk('ساخت و دانلود تصویر','primary',async(btn)=>{btn.disabled=true;try{await downloadPropertyCard(p,lines);}catch(e){console.error('card',e);toast('ساخت تصویر انجام نشد.');}finally{btn.disabled=false;}})
-  );
-  box.append(head,type,ta,acts);
+  const sendBtn=document.createElement('button');sendBtn.type='button';sendBtn.className='primary';sendBtn.textContent='ارسال به تلگرام مشاور';
+  sendBtn.onclick=async()=>{
+    const recipient=Number(recSel.value||0);
+    if(!recipient){status.textContent='گیرنده را انتخاب کن.';return;}
+    const mode=typeSel.value, recName=recSel.options[recSel.selectedIndex]?.textContent||'';
+    const kindLabel=mode==='full'?'نسخه کامل (شامل اطلاعات محرمانه)':'نسخه عمومی';
+    if(!confirm(`${kindLabel} برای ${recName} از طریق تلگرام ارسال شود؟`)) return;
+    sendBtn.disabled=true;status.textContent='در حال ارسال…';
+    const {data,error}=await shahrdarAuth.functions.invoke('crm-share',{body:{kind,id:row.id,mode,recipient_user_id:recipient}});
+    sendBtn.disabled=false;
+    if(error||!data||data.ok===false){console.error('crm-share',error,data);status.textContent='ارسال انجام نشد. گیرنده باید ربات را در تلگرام فعال کرده باشد و دسترسی را بررسی کن.';return;}
+    status.textContent='پیام به '+recName+' ارسال شد'+(data.photos_sent?` (${data.photos_sent.toLocaleString('fa-IR')} عکس)`:'')+'.';
+  };
+  acts.append(sendBtn);
+  box.append(head,typeLbl,typeSel,recLbl,recSel,status,acts);
+  if(isP){
+    const cardBtn=document.createElement('button');cardBtn.type='button';cardBtn.className='ghost';cardBtn.textContent='ساخت و دانلود تصویر (نسخه عمومی)';
+    cardBtn.onclick=async()=>{cardBtn.disabled=true;try{const {data:p,error}=await shahrdarAuth.from('properties').select(SHARE_PUBLIC_FIELDS).eq('id',row.id).single();if(error||!p) throw new Error('fetch');await downloadPropertyCard(p,sharePublicLines(p));}catch(e){console.error('card',e);toast('ساخت تصویر انجام نشد.');}finally{cardBtn.disabled=false;}};
+    const cardRow=document.createElement('div');cardRow.className='form-actions';cardRow.style.marginTop='10px';cardRow.appendChild(cardBtn);box.appendChild(cardRow);
+  }
+  back.appendChild(box);document.body.appendChild(back);
+  try{
+    const {data:people}=await shahrdarAuth.rpc('crm_staff_names');
+    recSel.innerHTML='';
+    (people||[]).forEach(u=>{const o=document.createElement('option');o.value=u.id;o.textContent=u.name||('شناسه '+u.id);recSel.appendChild(o);});
+    if(!recSel.options.length) recSel.innerHTML='<option value="">مشاوری پیدا نشد</option>';
+  }catch(e){recSel.innerHTML='<option value="">دریافت فهرست مشاوران انجام نشد</option>';}
+}
+async function openDeleteModal(kind,row){
+  const isP=kind==='property';
+  const {data:deps,error}=await shahrdarAuth.rpc('crm_record_dependents',{p_kind:kind,p_id:row.id});
+  if(error){toast('بررسی وابستگی‌ها انجام نشد؛ دسترسی را بررسی کن.');console.error('deps',error);return;}
+  const expected=String(isP?(row.code||''):(row.name||'')).trim();
+  const back=document.createElement('div');back.className='modal-backdrop open';
+  back.onclick=e=>{if(e.target===back)back.remove();};
+  const box=document.createElement('div');box.className='modal';
+  const head=document.createElement('div');head.className='modal-head';
+  const h=document.createElement('h2');h.textContent='حذف کامل '+(isP?'فایل ':'مشتری ')+expected;
+  const close=document.createElement('button');close.className='close';close.type='button';close.textContent='✕';close.onclick=()=>back.remove();
+  head.append(h,close);
+  const n=(v)=>Number(v||0).toLocaleString('fa-IR');
+  const info=document.createElement('div');info.className='notice';info.style.whiteSpace='pre-wrap';
+  info.textContent=isP
+    ? `حذف می‌شود: ${n(deps.photos)} عکس، ${n(deps.videos)} ویدئو، ${n(deps.ads)} آگهی.\nحفظ و جدا از این فایل می‌شود: ${n(deps.activities)} فعالیت، ${n(deps.visits)} بازدید، ${n(deps.status_events)} سابقه وضعیت.\nپیگیری‌های باز این فایل لغو می‌شوند.\nعکس‌ها در تلگرام باقی می‌مانند؛ فقط ارتباط آن‌ها با فایل قطع می‌شود.`
+    : `حفظ و جدا از این مشتری می‌شود: ${n(deps.activities)} فعالیت، ${n(deps.visits)} بازدید.\nپیگیری‌های باز این مشتری لغو می‌شوند.`;
+  const lbl=document.createElement('label');lbl.textContent=`برای تأیید، «${expected}» را تایپ کن`;lbl.style.marginTop='12px';
+  const inp=document.createElement('input');inp.className='field';inp.type='text';inp.autocomplete='off';
+  const acts=document.createElement('div');acts.className='form-actions';acts.style.marginTop='12px';
+  const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='حذف کامل';del.disabled=true;
+  inp.addEventListener('input',()=>{del.disabled=inp.value.trim()!==expected;});
+  del.onclick=async()=>{
+    del.disabled=true;
+    const {error:delErr}=await shahrdarAuth.rpc('crm_delete_record',{p_kind:kind,p_id:row.id});
+    if(delErr){console.error('delete',delErr);toast('حذف انجام نشد؛ دسترسی یا اتصال را بررسی کن.');del.disabled=inp.value.trim()!==expected;return;}
+    back.remove();toast('حذف انجام شد.');
+    reloadList(isP?'properties':'clients');
+    refreshHome();
+  };
+  const cancel=document.createElement('button');cancel.type='button';cancel.className='ghost';cancel.textContent='انصراف';cancel.onclick=()=>back.remove();
+  acts.append(del,cancel);
+  box.append(head,info,lbl,inp,acts);
   back.appendChild(box);document.body.appendChild(back);
 }
 function loadImageFrom(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
