@@ -24,6 +24,8 @@ body.auth-required .tg-login-screen{display:flex}
 .sort-menu{position:fixed;z-index:60;width:210px;background:var(--surface);border:1px solid var(--gold);border-radius:14px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:4px}
 .sort-menu button{background:transparent;border:0;color:var(--text);text-align:right;padding:9px 10px;border-radius:10px;font:inherit;cursor:pointer}
 .sort-menu button:hover,.sort-menu button.on{background:var(--surface2);color:var(--gold2)}
+.row-menu{background:transparent;border:1px solid #6b5630;color:var(--gold2);border-radius:10px;width:34px;height:34px;font-size:18px;line-height:1;cursor:pointer}
+.row-menu:hover{border-color:var(--gold);background:var(--surface2)}
 </style></head>
 <body class="auth-required">
 <div id="telegramLoginScreen" class="tg-login-screen">
@@ -133,7 +135,7 @@ function renderCrmTable(hostId,rows,columns,searchId){
  if(!filtered.length){host.innerHTML='<div class="empty">موردی برای نمایش پیدا نشد.</div>';return;}
  const wrap=document.createElement('div');wrap.className='table-wrap';const table=document.createElement('table');
  const head=document.createElement('thead'),hr=document.createElement('tr');columns.forEach(([,label])=>{const th=document.createElement('th');th.textContent=label;hr.appendChild(th)});head.appendChild(hr);table.appendChild(head);
- const body=document.createElement('tbody');filtered.forEach(row=>{const tr=document.createElement('tr');tr._row=row;tr.className='clickable-row';columns.forEach(([key])=>{const td=document.createElement('td');let value=row[key];if(['price','max_budget'].includes(key)&&value!==null&&value!==undefined)value=Number(value).toLocaleString('fa-IR')+' تومان';if(key==='sqm'&&value!==null&&value!==undefined)value=Number(value).toLocaleString('fa-IR')+' متر';if(key==='phone'&&value&&telHref(value)){td.appendChild(makeCallLink(value));}else{td.textContent=String(value??'—');}tr.appendChild(td)});body.appendChild(tr)});table.appendChild(body);wrap.appendChild(table);host.replaceChildren(wrap);
+ const body=document.createElement('tbody');filtered.forEach(row=>{const tr=document.createElement('tr');tr._row=row;tr.className='clickable-row';columns.forEach(([key])=>{const td=document.createElement('td');if(key==='__menu'){const mb=document.createElement('button');mb.type='button';mb.className='row-menu';mb.setAttribute('aria-label','گزینه‌ها');mb.textContent='⋮';mb.onclick=e=>{e.stopPropagation();openRowMenu(hostId,row,mb);};td.appendChild(mb);tr.appendChild(td);return;}let value=row[key];if(['price','max_budget'].includes(key)&&value!==null&&value!==undefined)value=Number(value).toLocaleString('fa-IR')+' تومان';if(key==='sqm'&&value!==null&&value!==undefined)value=Number(value).toLocaleString('fa-IR')+' متر';if(key==='phone'&&value&&telHref(value)){td.appendChild(makeCallLink(value));}else{td.textContent=String(value??'—');}tr.appendChild(td)});body.appendChild(tr)});table.appendChild(body);wrap.appendChild(table);host.replaceChildren(wrap);
  host.onclick=e=>{const tr=e.target.closest('tr');if(tr&&tr._row)openRecordModal(hostId,tr._row);};
 }
 const LIST_PAGE_SIZE=20;
@@ -175,7 +177,7 @@ async function loadListPage(kind){
   if(!(data||[]).length && from>0 && (count||0)>0){st.page=Math.max(0,Math.ceil(count/LIST_PAGE_SIZE)-1);return loadListPage(kind);}
   const names=await getStaffNames(); (data||[]).forEach(r=>{r.responsible=names[r.owner_user_id]||'—';});
   if(isC) crmClientsCache=data||[]; else crmPropertiesCache=data||[];
-  renderCrmTable(isC?'clientsList':'propertiesList',data||[],isC?CLIENT_LIST_COLUMNS:PROPERTY_LIST_COLUMNS,null);
+  renderCrmTable(isC?'clientsList':'propertiesList',data||[],(isC?CLIENT_LIST_COLUMNS:PROPERTY_LIST_COLUMNS).concat([['__menu','']]),null);
   renderListPager(kind,count||0);
 }
 function loadClients(){return loadListPage('clients');}
@@ -195,6 +197,86 @@ function openSortMenu(kind,btn){
   const close=(e)=>{if(!m.contains(e.target)){m.remove();document.removeEventListener('click',close,true);}};
   setTimeout(()=>document.addEventListener('click',close,true),0);
 }
+function openRowMenu(hostId,row,btn){
+  document.getElementById('sortMenu')?.remove();
+  const isProp=hostId==='propertiesList';
+  const m=document.createElement('div'); m.id='sortMenu'; m.className='sort-menu';
+  const add=(label,fn,disabled)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.disabled=!!disabled;if(!disabled)b.onclick=()=>{m.remove();fn();};m.appendChild(b);};
+  if(isProp) add('↗️ اشتراک‌گذاری',()=>openPropertyShare(row.id));
+  else add('↗️ اشتراک‌گذاری (به‌زودی)',()=>{},true);
+  document.body.appendChild(m);
+  const r=btn.getBoundingClientRect();
+  m.style.top=(r.bottom+6)+'px';
+  m.style.left=Math.max(8,Math.min(r.left-190,window.innerWidth-230))+'px';
+  const close=(e)=>{if(!m.contains(e.target)){m.remove();document.removeEventListener('click',close,true);}};
+  setTimeout(()=>document.addEventListener('click',close,true),0);
+}
+const SHARE_PUBLIC_FIELDS='id,code,deal_type,rent_type,property_type,area,sqm,bedrooms,floor_label,build_year,elevator,parking,storage,price,rent,deposit';
+function sharePublicLines(p){
+  const fmt=(v)=>Number(v).toLocaleString('fa-IR')+' تومان';
+  const lines=[
+    ['کد فایل',p.code],['نوع معامله',p.deal_type],['نوع ملک',p.property_type],['محله',p.area],
+    ['متراژ',p.sqm!=null?Number(p.sqm).toLocaleString('fa-IR')+' متر':null],
+    ['تعداد خواب',p.bedrooms!=null?Number(p.bedrooms).toLocaleString('fa-IR'):null],
+    ['طبقه',p.floor_label],['سال ساخت',p.build_year],['آسانسور',p.elevator],['پارکینگ',p.parking],['انباری',p.storage],
+    ['قیمت',p.price?fmt(p.price):null],['اجاره ماهانه',p.rent?fmt(p.rent):null],['ودیعه',p.deposit?fmt(p.deposit):null]
+  ];
+  return lines.filter(([,v])=>v!==null&&v!==undefined&&String(v).trim()!=='' && String(v)!=='0');
+}
+async function openPropertyShare(id){
+  const {data:p,error}=await shahrdarAuth.from('properties').select(SHARE_PUBLIC_FIELDS).eq('id',id).single();
+  if(error||!p){toast('اطلاعات فایل برای اشتراک‌گذاری دریافت نشد.');return;}
+  const lines=sharePublicLines(p);
+  const text='🏢 شهردار ایران‌زمین\nمعرفی فایل ملک\n\n'+lines.map(([k,v])=>k+': '+v).join('\n')+'\n\n— نسخه عمومی: اطلاعات تماس مالک و آدرس دقیق ارائه نمی‌شوند.';
+  const back=document.createElement('div');back.className='modal-backdrop open';
+  back.onclick=e=>{if(e.target===back)back.remove();};
+  const box=document.createElement('div');box.className='modal';
+  const head=document.createElement('div');head.className='modal-head';
+  const h=document.createElement('h2');h.textContent='اشتراک‌گذاری فایل '+(p.code||'');
+  const close=document.createElement('button');close.className='close';close.type='button';close.textContent='✕';close.onclick=()=>back.remove();
+  head.append(h,close);
+  const type=document.createElement('p');type.className='notice';type.textContent='نوع اشتراک‌گذاری: نسخه عمومی (بدون نام و شماره مالک، بدون آدرس دقیق)';
+  const ta=document.createElement('textarea');ta.className='field';ta.rows=12;ta.readOnly=true;ta.value=text;ta.style.marginTop='12px';
+  const acts=document.createElement('div');acts.className='form-actions';acts.style.marginTop='12px';
+  const mk=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=fn;return b;};
+  acts.append(
+    mk('کپی متن','ghost',async()=>{try{await navigator.clipboard.writeText(text);toast('متن کپی شد.');}catch(e){ta.select();toast('کپی خودکار انجام نشد؛ متن را انتخاب کن.');}}),
+    mk('ساخت و دانلود تصویر','primary',async(btn)=>{btn.disabled=true;try{await downloadPropertyCard(p,lines);}catch(e){console.error('card',e);toast('ساخت تصویر انجام نشد.');}finally{btn.disabled=false;}})
+  );
+  box.append(head,type,ta,acts);
+  back.appendChild(box);document.body.appendChild(back);
+}
+function loadImageFrom(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
+async function downloadPropertyCard(p,lines){
+  const W=1080,H=1350;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const ctx=cv.getContext('2d');
+  const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#090d15');bg.addColorStop(1,'#14203a');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#d8b56b';ctx.lineWidth=6;ctx.strokeRect(40,40,W-80,H-80);
+  ctx.lineWidth=2;ctx.strokeRect(60,60,W-120,H-120);
+  const logoEl=document.querySelector('.logo svg');
+  if(logoEl){try{const svg=logoEl.cloneNode(true);svg.setAttribute('width','180');svg.setAttribute('height','180');const src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(svg));const img=await loadImageFrom(src);ctx.drawImage(img,(W-180)/2,110,180,180);}catch(e){}}
+  ctx.textAlign='center';ctx.direction='rtl';
+  ctx.fillStyle='#d8b56b';ctx.font='bold 60px Tahoma, Vazirmatn, sans-serif';ctx.fillText('شهردار ایران‌زمین',W/2,380);
+  ctx.fillStyle='#8e9aab';ctx.font='34px Tahoma, Vazirmatn, sans-serif';ctx.fillText('معرفی فایل ملک',W/2,430);
+  ctx.fillStyle='#f0d99f';ctx.font='bold 56px Tahoma, Vazirmatn, sans-serif';ctx.fillText('کد '+(p.code||'—'),W/2,540);
+  ctx.textAlign='right';let y=620;
+  lines.filter(([k])=>k!=='کد فایل').slice(0,12).forEach(([k,v])=>{
+    ctx.fillStyle='#8e9aab';ctx.font='32px Tahoma, Vazirmatn, sans-serif';ctx.fillText(k,W-140,y);
+    ctx.fillStyle='#f4f5f7';ctx.font='bold 34px Tahoma, Vazirmatn, sans-serif';ctx.textAlign='left';ctx.fillText(String(v),140,y);ctx.textAlign='right';
+    ctx.strokeStyle='#273244';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(140,y+18);ctx.lineTo(W-140,y+18);ctx.stroke();
+    y+=70;
+  });
+  ctx.textAlign='center';ctx.fillStyle='#8e9aab';ctx.font='26px Tahoma, Vazirmatn, sans-serif';
+  ctx.fillText('نسخه عمومی — بدون اطلاعات تماس مالک و آدرس دقیق',W/2,H-110);
+  const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+  if(!blob) throw new Error('blob');
+  const file=new File([blob],'property-'+(p.code||'file')+'.png',{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'فایل '+(p.code||'')});return;}catch(e){}}
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+
 function bindListSearch(inputId,kind){
   const input=document.getElementById(inputId); if(!input) return;
   let t; input.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(()=>{listState[kind].q=input.value;listState[kind].page=0;reloadList(kind);},300);});
