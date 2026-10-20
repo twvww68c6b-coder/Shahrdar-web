@@ -52,7 +52,7 @@ body.auth-required .tg-login-screen{display:flex}
 <div id="followFormPanel" class="panel hidden" style="margin-top:15px"><div class="panel-title"><h3>ثبت پیگیری</h3><span>ذخیره در CRM</span></div><div class="form-grid"><div class="form-field"><label for="followPerson">نام مشتری یا مسئول فایل</label><input class="field" id="followPerson" placeholder="نام"></div><div class="form-field"><label for="followKind">نوع پیگیری</label><select class="field" id="followKind"><option>تماس</option><option>بازدید</option><option>مذاکره</option><option>پیگیری قرارداد</option></select></div><div class="form-field"><label for="followDate">تاریخ پیگیری بعدی</label><input class="field" id="followDate" type="date"></div><div class="form-field"><label for="followNote">یادداشت</label><input class="field" id="followNote" placeholder="یادداشت اختیاری"></div></div><div class="form-actions"><button class="primary" onclick="addLocalFollow()">افزودن پیگیری</button></div><div id="followList" class="quick-grid" style="margin-top:15px"></div></div>
 <div id="propertyFormPanel" class="panel hidden" style="margin-top:15px"><div class="panel-title"><h3>ثبت فایل ملکی</h3><span>ذخیره در CRM</span></div><div class="form-grid"><div class="form-field"><label for="propDeal">نوع معامله</label><select class="field" id="propDeal"><option>فروش</option><option>اجاره</option><option>مشارکت در ساخت</option></select></div><div class="form-field"><label for="propArea">محله</label><input class="field" id="propArea" placeholder="مثلاً خانی‌آباد نو"></div><div class="form-field"><label for="propSize">متراژ</label><input class="field" id="propSize" type="number" min="1" placeholder="متر مربع"></div><div class="form-field"><label for="propRooms">تعداد اتاق</label><input class="field" id="propRooms" type="number" min="0"></div><div class="form-field"><label for="propPrice">قیمت (تومان)</label><input class="field" id="propPrice" inputmode="numeric"></div><div class="form-field"><label for="propStatus">وضعیت</label><select class="field" id="propStatus"><option>فعال</option><option>فوری</option><option>خصوصی</option></select></div></div><div class="form-actions"><button class="primary" onclick="openRecordForm('property')">ادامه در فرم کامل فایل ملکی</button></div><div id="localPropertyList" class="quick-grid" style="margin-top:15px"></div></div>
 </section>
-<section class="page" id="page-performance"><div class="panel"><div class="panel-title"><h3>عملکرد من</h3><span>آمار مبتنی بر CRM</span></div><div id="perfStats" class="quick-grid"></div></div><div class="panel" style="margin-top:15px"><div class="panel-title"><h3>ثبت پیگیری جدید</h3><span>در پیگیری‌های من ذخیره می‌شود</span></div><div class="form-grid"><div class="form-field"><label>مربوط به</label><select id="fuTarget" class="field"><option>کلی</option><option>فایل ملکی</option><option>مشتری</option></select></div><div class="form-field"><label>کد فایل یا نام مشتری</label><input id="fuRef" class="field" placeholder="مثلاً d 9 یا نام مشتری"></div><div class="form-field full"><label>شرح پیگیری *</label><textarea id="fuNote" class="field" rows="3" placeholder="مثلاً تماس گرفتم و قرار بازدید گذاشتیم"></textarea></div></div><div class="form-actions"><button class="primary" type="button" onclick="saveFollowUp()">ثبت پیگیری</button></div><p class="notice" id="fuStatus"></p></div></section>
+<section class="page" id="page-performance"><div class="panel"><div class="panel-title"><h3>عملکرد من</h3><span>آمار مبتنی بر CRM</span></div><div id="perfStats" class="quick-grid"></div></div><div class="panel" style="margin-top:15px"><div class="panel-title"><h3>ثبت پیگیری جدید</h3><span>با یادآوری خودکار در تلگرام</span></div><div class="form-grid"><div class="form-field"><label for="fuClient">نام مشتری</label><input id="fuClient" class="field" placeholder="نام مشتری (یا کد ملک)"></div><div class="form-field"><label for="fuCode">کد ملک</label><input id="fuCode" class="field" placeholder="مثلاً d 9"></div><div class="form-field"><label for="fuOwner">مسئول پیگیری</label><select id="fuOwner" class="field"></select></div><div class="form-field"><label for="fuDue">موعد پیگیری *</label><input id="fuDue" class="field" type="datetime-local" dir="ltr"></div><div class="form-field full"><label for="fuNote">یادداشت مشاور *</label><textarea id="fuNote" class="field" rows="3" placeholder="مثلاً تماس بگیرید و قرار بازدید بگذارید"></textarea></div></div><div class="form-actions"><button class="primary" type="button" onclick="saveFollowUp()">ثبت پیگیری</button></div><p class="notice" id="fuStatus"></p></div><div class="panel" style="margin-top:15px"><div class="panel-title"><h3>پیگیری‌ها</h3><span id="fuSummary"></span></div><div id="fuManagerBar" class="hidden" style="margin-bottom:12px"><label for="fuOwnerFilter">نمایش پیگیری‌های</label> <select id="fuOwnerFilter" class="field" onchange="loadFollowUps()"></select></div><div id="fuLists"></div></div><div id="fuReportPanel" class="panel hidden" style="margin-top:15px"><div class="panel-title"><h3>گزارش پیگیری مشاوران</h3><span>فقط مدیر</span></div><div id="fuReportTable"></div></div></section>
 <section class="page" id="page-admin"><div class="panel"><div class="panel-title"><h3>داشبورد مدیریتی</h3><span>فقط مدیر</span></div><div id="adminDash" class="empty">در حال بارگذاری…</div></div></section>
 <section class="page" id="page-citizen"><div class="citizen-note">بخش عمومی شهروند: هیچ نام یا شمارهٔ مالک، نشانی دقیق، شناسهٔ داخلی، لینک منبع خصوصی یا یادداشت مشاور نباید به مرورگر عمومی ارسال شود. این فیلتر باید در API سمت سرور اعمال شود.</div><div class="panel"><div class="panel-title"><h3>جست‌وجوی ملک</h3><span>نمایش عمومی</span></div><div class="form-grid"><div class="form-field"><label>محله</label><select id="srchArea" class="field"><option value="">همه محله‌ها</option><option>خانی‌آباد نو شمالی</option><option>خانی‌آباد نو جنوبی</option><option>شریعتی</option><option>بوستان شمالی</option><option>بوستان جنوبی</option></select></div><div class="form-field"><label>نوع ملک</label><select id="srchType" class="field"><option value="">همه انواع</option><option>آپارتمان</option><option>خانه</option><option>زمین</option><option>کلنگی</option></select></div><div class="form-field"><label>حداقل قیمت (تومان)</label><input id="srchMin" class="field" inputmode="numeric" placeholder="حداقل"></div><div class="form-field"><label>حداکثر قیمت (تومان)</label><input id="srchMax" class="field" inputmode="numeric" placeholder="حداکثر"></div><div class="form-field"><label>حداقل متراژ</label><input id="srchSqm" class="field" inputmode="numeric" placeholder="متر مربع"></div><div class="form-field"><label>اتاق</label><select id="srchRooms" class="field"><option value="">فرقی ندارد</option><option>بدون اتاق</option><option>۱</option><option>۲</option><option>۳+</option></select></div></div><div class="form-actions"><button class="primary" onclick="searchCitizenProperties()">جست‌وجوی ملک</button></div><div class="empty"><div><div class="empty-icon">⌕</div>هنوز فایل عمومی برای نمایش بارگذاری نشده است.</div></div></div></section>
 <footer>HOOMAN · SHAHRDAR IRANZAMIN</footer></main></div>
@@ -798,30 +798,175 @@ async function downloadBackupExcel(btn){
 async function saveFollowUp(){
   const status=document.getElementById('fuStatus');
   const note=(document.getElementById('fuNote').value||'').trim();
-  const target=document.getElementById('fuTarget').value;
-  const ref=(document.getElementById('fuRef').value||'').trim();
-  if(!note){status.textContent='شرح پیگیری را وارد کن.';return;}
-  if(target!=='کلی'&&!ref){status.textContent='کد فایل یا نام مشتری را وارد کن.';return;}
-  const profile=await getCrmProfile().catch(()=>null);
-  if(!profile){status.textContent='پروفایل پیدا نشد.';return;}
-  let propertyId=0, clientId=0;
-  if(target==='فایل ملکی'){
-    const {data,error}=await shahrdarAuth.from('properties').select('id').eq('code',ref).limit(1);
-    if(error||!data||!data.length){status.textContent='فایلی با این کد پیدا نشد.';return;}
-    propertyId=data[0].id;
-  }
-  if(target==='مشتری'){
-    const {data,error}=await shahrdarAuth.from('clients').select('id').eq('name',ref).limit(1);
+  const clientName=(document.getElementById('fuClient').value||'').trim();
+  const code=(document.getElementById('fuCode').value||'').trim();
+  const dueLocal=document.getElementById('fuDue').value;
+  const owner=Number(document.getElementById('fuOwner').value||0);
+  if(!note){status.textContent='یادداشت مشاور را وارد کن.';return;}
+  if(!dueLocal){status.textContent='موعد پیگیری را وارد کن.';return;}
+  if(!clientName&&!code){status.textContent='نام مشتری یا کد ملک را وارد کن.';return;}
+  const dueMs=Date.parse(dueLocal+':00+03:30');
+  if(!Number.isFinite(dueMs)){status.textContent='موعد معتبر نیست.';return;}
+  let profile; try{profile=await getCrmProfile();}catch(e){status.textContent=e.message;return;}
+  let clientId=0, propertyId=0;
+  if(clientName){
+    const {data,error}=await shahrdarAuth.from('clients').select('id').eq('name',clientName).limit(1);
     if(error||!data||!data.length){status.textContent='مشتری با این نام پیدا نشد.';return;}
     clientId=data[0].id;
   }
-  const {error}=await shahrdarAuth.from('activities').insert({user_id:profile.crmId,property_id:propertyId,client_id:clientId,activity_type:'پیگیری',note,created_at:new Date().toISOString()});
+  if(code){
+    const {data,error}=await shahrdarAuth.from('properties').select('id').eq('code',code).limit(1);
+    if(error||!data||!data.length){status.textContent='فایلی با این کد پیدا نشد.';return;}
+    propertyId=data[0].id;
+  }
+  const nowIso=new Date().toISOString();
+  const {error}=await shahrdarAuth.from('activities').insert({
+    user_id:profile.crmId, responsible_user_id:owner||profile.crmId,
+    property_id:propertyId, client_id:clientId, activity_type:'پیگیری', note,
+    due_at:new Date(dueMs).toISOString(), status:'باز',
+    reminder_status:null, reminder_attempts:0, created_at:nowIso, updated_at:nowIso
+  });
   if(error){console.error('followup',error);status.textContent='ثبت پیگیری انجام نشد؛ دسترسی یا اتصال را بررسی کن.';return;}
-  document.getElementById('fuNote').value='';document.getElementById('fuRef').value='';
-  status.textContent='پیگیری ثبت شد.';toast('پیگیری ثبت شد.');
-  loadPerformance();refreshHome();
+  document.getElementById('fuNote').value='';document.getElementById('fuClient').value='';
+  document.getElementById('fuCode').value='';document.getElementById('fuDue').value='';
+  status.textContent='پیگیری ثبت شد و یادآوری در موعد برای مسئول ارسال می‌شود.';
+  loadFollowUps();
 }
+const FU_TZ_MS=(3*60+30)*60000;
+const fuTehranDay=(iso)=>new Date(new Date(iso).getTime()+FU_TZ_MS).toISOString().slice(0,10);
+const fuLabel=(iso)=>iso?new Date(iso).toLocaleString('fa-IR',{timeZone:'Asia/Tehran',dateStyle:'short',timeStyle:'short'}):'—';
+function fuCategorize(rows){
+  const now=Date.now(), today=fuTehranDay(new Date(now).toISOString());
+  const out={overdue:[],today:[],remaining:[],done:[]};
+  for(const r of rows){
+    if(r.status==='لغو') continue;
+    if(Number.isNaN(new Date(r.due_at).getTime())&&r.status!=='انجام شد') continue;
+    if(r.status==='انجام شد'){out.done.push(r);continue;}
+    if(new Date(r.due_at).getTime()<now) out.overdue.push(r);
+    else if(fuTehranDay(r.due_at)===today) out.today.push(r);
+    else out.remaining.push(r);
+  }
+  out.done.sort((a,b)=>String(b.completed_at||'').localeCompare(String(a.completed_at||'')));
+  return out;
+}
+async function loadFollowUps(){
+  const lists=document.getElementById('fuLists'); if(!lists) return;
+  let profile; try{profile=await getCrmProfile();}catch(e){lists.className='empty';lists.textContent=e.message;return;}
+  const manager=isManagerProfile(profile);
+  const staff=await getStaffNames();
+  const names=(id)=>staff[id]||(id?'شناسه '+id:'—');
+  const ownerSel=document.getElementById('fuOwner');
+  if(ownerSel&&!ownerSel.options.length){
+    Object.keys(staff).sort((a,b)=>String(staff[a]).localeCompare(String(staff[b]),'fa')).forEach(id=>{
+      const o=document.createElement('option');o.value=id;o.textContent=staff[id];ownerSel.appendChild(o);});
+    ownerSel.value=String(profile.crmId);
+  }
+  const bar=document.getElementById('fuManagerBar'), filt=document.getElementById('fuOwnerFilter');
+  if(manager){
+    bar.classList.remove('hidden');
+    if(!filt.options.length){
+      const all=document.createElement('option');all.value='all';all.textContent='همه مشاوران';filt.appendChild(all);
+      Object.keys(staff).sort((a,b)=>String(staff[a]).localeCompare(String(staff[b]),'fa')).forEach(id=>{
+        const o=document.createElement('option');o.value=id;o.textContent=staff[id];filt.appendChild(o);});
+    }
+  } else bar.classList.add('hidden');
+
+  let q=shahrdarAuth.from('activities')
+    .select('id,user_id,responsible_user_id,client_id,property_id,note,due_at,status,completed_at,reminder_status,reminder_sent_at,reminder_error,reminder_attempts')
+    .eq('activity_type','پیگیری').not('due_at','is',null).order('due_at',{ascending:true}).limit(1000);
+  if(manager){ if(filt.value&&filt.value!=='all') q=q.eq('responsible_user_id',Number(filt.value)); }
+  else q=q.or(`responsible_user_id.eq.${profile.crmId},user_id.eq.${profile.crmId}`);
+  const {data,error}=await q;
+  if(error){console.error('followups',error);lists.className='empty';lists.textContent='دریافت پیگیری‌ها انجام نشد.';return;}
+  const rows=data||[];
+  const cIds=[...new Set(rows.map(r=>r.client_id).filter(Boolean))], pIds=[...new Set(rows.map(r=>r.property_id).filter(Boolean))];
+  const [cl,pr]=await Promise.all([
+    cIds.length?shahrdarAuth.from('clients').select('id,name').in('id',cIds):{data:[]},
+    pIds.length?shahrdarAuth.from('properties').select('id,code').in('id',pIds):{data:[]}
+  ]);
+  const cMap=Object.fromEntries((cl.data||[]).map(x=>[x.id,x.name]));
+  const pMap=Object.fromEntries((pr.data||[]).map(x=>[x.id,x.code]));
+  const enriched=rows.map(r=>({...r,client_name:cMap[r.client_id]||'',property_code:pMap[r.property_id]||''}));
+  const cat=fuCategorize(enriched);
+  document.getElementById('fuSummary').textContent=`امروز ${cat.today.length} · عقب‌افتاده ${cat.overdue.length} · باقی‌مانده ${cat.remaining.length} · انجام‌شده ${cat.done.length}`;
+  lists.className=''; lists.innerHTML='';
+  const sections=[['پیگیری‌های امروز',cat.today],['پیگیری‌های سررسیدگذشته',cat.overdue],['پیگیری‌های باقی‌مانده',cat.remaining],['پیگیری‌های انجام‌شده',cat.done]];
+  for(const [title,items] of sections){
+    const h=document.createElement('h3');h.style.margin='14px 0 8px';h.textContent=title+' ('+items.length.toLocaleString('fa-IR')+')';lists.appendChild(h);
+    if(!items.length){const e=document.createElement('div');e.className='notice';e.style.margin='0 0 8px';e.textContent='موردی نیست.';lists.appendChild(e);continue;}
+    items.slice(0,50).forEach(r=>{
+      const d=document.createElement('article');d.className='quick';d.style.cursor='pointer';d.style.marginBottom='8px';
+      const t=document.createElement('strong');t.textContent=(r.client_name||'بدون مشتری')+(r.property_code?' — '+r.property_code:'');
+      const sm=document.createElement('small');sm.textContent=(r.note||'').slice(0,90)+' · موعد: '+fuLabel(r.due_at)+' · مسئول: '+names(r.responsible_user_id);
+      d.append(t,document.createElement('br'),sm);
+      d.onclick=()=>openFollowUpDetail(r,names);
+      lists.appendChild(d);
+    });
+  }
+  if(manager) loadFollowUpReport(staff);
+}
+function openFollowUpDetail(r,names){
+  const back=document.createElement('div');back.className='modal-backdrop open';
+  back.onclick=e=>{if(e.target===back)back.remove();};
+  const box=document.createElement('div');box.className='modal';
+  const head=document.createElement('div');head.className='modal-head';
+  const h=document.createElement('h2');h.textContent='جزئیات پیگیری';
+  const close=document.createElement('button');close.className='close';close.type='button';close.textContent='✕';close.onclick=()=>back.remove();
+  head.append(h,close);
+  const info=document.createElement('div');info.className='notice';info.style.whiteSpace='pre-wrap';
+  const rem=r.reminder_status==='sent'?'ارسال شد در '+fuLabel(r.reminder_sent_at):(r.reminder_status==='error'?'خطا: '+(r.reminder_error||'—')+' (تلاش‌ها: '+(r.reminder_attempts||0)+')':'هنوز ارسال نشده');
+  info.textContent=`مشتری: ${r.client_name||'—'}\nکد ملک: ${r.property_code||'—'}\nمسئول: ${names(r.responsible_user_id)}\nموعد: ${fuLabel(r.due_at)}\nوضعیت: ${r.status||'باز'}\nیادداشت: ${r.note||'—'}\nیادآوری تلگرام: ${rem}`;
+  const note=document.createElement('textarea');note.className='field';note.rows=3;note.value=r.note||'';note.style.marginTop='12px';
+  const due=document.createElement('input');due.type='datetime-local';due.className='field';due.dir='ltr';due.style.marginTop='8px';
+  const acts=document.createElement('div');acts.className='form-actions';acts.style.marginTop='12px';
+  const mk=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.onclick=fn;return b;};
+  const save=async(patch,okMsg)=>{
+    patch.updated_at=new Date().toISOString();
+    const {error}=await shahrdarAuth.from('activities').update(patch).eq('id',r.id);
+    if(error){console.error('followup update',error);toast('ذخیره انجام نشد؛ دسترسی را بررسی کن.');return;}
+    toast(okMsg); back.remove(); loadFollowUps();
+  };
+  acts.append(
+    mk('انجام شد','primary',()=>save({status:'انجام شد',completed_at:new Date().toISOString()},'پیگیری انجام شد.')),
+    mk('ذخیره یادداشت','ghost',()=>save({note:note.value.trim()},'یادداشت ذخیره شد.')),
+    mk('تغییر موعد','ghost',()=>{
+      if(!due.value){toast('موعد جدید را انتخاب کن.');return;}
+      const ms=Date.parse(due.value+':00+03:30'); if(!Number.isFinite(ms)){toast('موعد معتبر نیست.');return;}
+      save({due_at:new Date(ms).toISOString(),reminder_status:null,reminder_attempts:0,reminder_error:null,reminder_sent_at:null,reminder_next_try:null},'موعد تغییر کرد.');
+    }),
+    mk('لغو پیگیری','ghost',()=>{ if(confirm('این پیگیری لغو شود؟')) save({status:'لغو'},'پیگیری لغو شد.'); })
+  );
+  box.append(head,info,note,due,acts);
+  back.appendChild(box);document.body.appendChild(back);
+}
+async function loadFollowUpReport(staff){
+  const panel=document.getElementById('fuReportPanel'), host=document.getElementById('fuReportTable');
+  if(!panel||!host) return;
+  panel.classList.remove('hidden');
+  const {data,error}=await shahrdarAuth.from('activities').select('responsible_user_id,status,due_at').eq('activity_type','پیگیری').not('due_at','is',null).limit(5000);
+  if(error){host.textContent='دریافت گزارش انجام نشد.';return;}
+  const now=Date.now(); const agg={};
+  for(const r of (data||[])){
+    if(r.status==='لغو') continue;
+    const k=r.responsible_user_id||0; agg[k]=agg[k]||{done:0,remaining:0,overdue:0};
+    if(r.status==='انجام شد') agg[k].done++;
+    else if(new Date(r.due_at).getTime()<now) agg[k].overdue++;
+    else agg[k].remaining++;
+  }
+  const table=document.createElement('table');
+  table.innerHTML='<thead><tr><th>مشاور</th><th>انجام‌شده</th><th>باقی‌مانده</th><th>عقب‌افتاده</th></tr></thead>';
+  const tb=document.createElement('tbody');
+  Object.keys(agg).sort((a,b)=>String(staff[a]||'').localeCompare(String(staff[b]||''),'fa')).forEach(k=>{
+    const tr=document.createElement('tr');
+    [staff[k]||(k==='0'?'بدون مسئول':'شناسه '+k),agg[k].done,agg[k].remaining,agg[k].overdue].forEach(v=>{const td=document.createElement('td');td.textContent=typeof v==='number'?v.toLocaleString('fa-IR'):String(v);tr.appendChild(td);});
+    tb.appendChild(tr);
+  });
+  if(!tb.children.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=4;td.textContent='پیگیری ثبت نشده است.';tr.appendChild(td);tb.appendChild(tr);}
+  table.appendChild(tb);host.innerHTML='';host.appendChild(table);
+}
+
 async function loadPerformance(){
+  loadFollowUps();
   const host=document.getElementById('perfStats'); if(!host) return;
   const profile=await getCrmProfile().catch(()=>null);
   if(!profile){host.textContent='پروفایل CRM پیدا نشد.';return;}
