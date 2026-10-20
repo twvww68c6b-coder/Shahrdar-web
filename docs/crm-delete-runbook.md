@@ -1,0 +1,63 @@
+# CRM: حذف کامل، اشتراک‌گذاری و Migration (Runbook)
+
+وضعیت: **Migration روی دیتابیس اصلی اعمال نشده است.** هر مرحله‌ی زیر فقط با تأیید صریح انجام شود.
+
+## 1. تصمیم‌های باز
+| موضوع | گزینه‌ی پیشنهادی | دلیل کوتاه |
+|---|---|---|
+| حفظ پیوند اصلی پس از حذف | افزودن ستون‌های `original_property_id` و `original_client_id` به `activities`، `visits`، `status_events` (فقط برای نگهداری شناسه‌ی قبلی) | بدون آن، پیوند فعالیت‌ها و بازدیدها پس از حذف برای همیشه از بین می‌رود |
+| بازیابی پس از حذف | پشتیبان کامل قبل از اولین حذف واقعی + Point-in-time recovery در صورت پلن مناسب | حذف واقعی قابل برگشت نیست |
+| دسترسی anon به `web_login_email` | ورود با نام کاربری به Edge Function منتقل شود؛ سپس دسترسی anon بسته شود | RPC فعلی ایمیل ورود را بدون احراز هویت برمی‌گرداند |
+| دسترسی anon به `citizen_search_properties` | بستن دسترسی anon، فقط پس از تأیید اینکه جست‌وجوی شهروند بعد از ورود است | خروجی امن است، اما بدون نیاز نباید عمومی باشد |
+| محافظت از رمزهای لو رفته | فعال‌سازی در داشبورد (پلن Pro یا بالاتر) | ریسک رمزهای ضعیف و لو رفته |
+| تست تلگرام | یک حساب مشاور آزمایشی که ربات را فعال کرده باشد | ارسال واقعی فقط با تأیید جداگانه |
+
+## 2. بررسی Migration (`20261020000100_crm_record_delete_and_share_helpers.sql`)
+- وابستگی‌ها روی دیتابیس واقعی تأیید شد: `crm_is_admin()`، `current_crm_user_id()` و `current_crm_telegram_id()` وجود دارند و امضایشان درست است.
+- ستون‌های `created_by` و `owner_user_id` و `agent_id` با نوع‌های استفاده‌شده در توابع سازگارند.
+- تست محلی با PostgreSQL ۱۶ و داده‌ی ساختگی: موفق (حذف، حفظ سوابق، لغو پیگیری‌ها، رد دسترسی غیرمجاز).
+- **اجرا نشده.** تا تأیید شما و تست HTTP زنده، روی دیتابیس اصلی اعمال نمی‌شود.
+
+## 3. بازگشت (Rollback) توابع و Grantها
+فایل `supabase/migrations/20261020000200_crm_record_delete_and_share_helpers_rollback.sql` بازگشت کد را انجام می‌دهد، اما **داده‌های حذف‌شده یا پیوندهای قطع‌شده را برنمی‌گرداند.** این فایل هم اجرا نشده است.
+
+## 4. پشتیبان‌گیری و بازیابی
+- **روش داشبورد:** Project → Database → Backups (در صورت پشتیبانی پلن). بازیابی از همین بخش انجام می‌شود.
+- **روش خروجی دستی:** `pg_dump` با رشته‌ی اتصال پروژه (فقط‌خواندنی). این کار نیاز به رمز دیتابیس دارد که باید توسط شما وارد شود.
+- **آزمون بازیابی:** قبل از حذف واقعی، پشتیبان را روی یک پروژه‌ی جداگانه‌ی آزمایشی بازیابی و شمارش رکوردها را مقایسه کنید.
+
+## 5. محافظت از رمزهای لو رفته
+1. داشبورد Supabase را باز کنید؛ پروژه‌ی `igunsreoursotuxqpyfs`.
+2. بخش Authentication → Providers → Email (مستقیم: `/dashboard/project/_/auth/providers?provider=Email`).
+3. گزینه‌ی Leaked password protection (HaveIBeenPwned) را فعال کنید.
+4. اگر گزینه نبود، پلن پروژه کمتر از Pro است و تصمیم لازم است.
+- اثر: کاربران فعلی با رمز فعلی وارد می‌شوند؛ رمزهای جدید و تغییر رمز بررسی می‌شوند.
+
+## 6. اجرای تست HTTP زنده (از دستگاهی با دسترسی به Supabase)
+```
+SUPABASE_URL=https://igunsreoursotuxqpyfs.supabase.co SUPABASE_ANON_KEY=<publishable key> ./scripts/test-crm-share-auth.sh
+```
+انتظار: هر دو خط `PASS` با کد `401`. خروجی کامل را بفرستید.
+
+## 7. وضعیت پلن و پشتیبان (بررسی شد)
+- پلن سازمان: **Free**. در این پلن پشتیبان خودکار و Point-in-time recovery در دسترس نیست؛ بنابراین **پشتیبان باید دستی گرفته شود**.
+- روش دستی پیشنهادی: `pg_dump` با رشته‌ی اتصال پروژه (از داشبورد: Project Settings → Database) و رمز دیتابیس که فقط شما باید وارد کنید. فایل پشتیبان را خارج از مخزن نگه دارید.
+- آزمون بازیابی: روی یک پروژه‌ی آزمایشی جداگانه (ایجاد پروژه تازه ممکن است هزینه یا محدودیت داشته باشد؛ قبل از اقدام، تأیید بگیرید).
+- محافظت از رمز لو رفته: در پلن Free در دسترس نیست و نیاز به Pro یا بالاتر دارد. تصمیم با شماست.
+
+## 8. ستون‌های پیوند اصلی (`20261020000300_crm_original_links.sql`)
+- ستون‌ها nullable و اضافه‌شونده‌اند؛ بازبینی شد که ربات (مدل‌های ORM) ستون‌های ناشناخته را نادیده می‌گیرد.
+- تست محلی (داده‌ی ساختگی): پیوند اصلی حفظ می‌شود، فعالیت‌ها و بازدیدها بدون تغییر می‌مانند، گزارش فعالیت به تفکیک مشاور تغییر نمی‌کند، و درج‌های قدیمی بدون ستون‌های جدید کار می‌کنند.
+- **اجرا نشده.**
+
+## 9. ورود با نام کاربری (`supabase/functions/web-login`)
+- در این مخزن نوشته شده و تست محلی با شبیه‌سازی Supabase موفق است.
+- **deploy نشده** و پنل هنوز از روش فعلی استفاده می‌کند.
+- ترتیب امن: deploy با `verify_jwt=false`، تغییر کلاینت به این Function، تست ورود، و سپس بستن `anon` روی `web_login_email` (مرحله‌ی B در فایل `20261020000400`).
+
+## Pending migration: owner-update policy (`20261020000500`)
+- Problem: a consultant who owns a record but did not create it can see it but cannot save edits (UPDATE `WITH CHECK` requires `created_by`).
+- Fix: owner OR creator (or admin) may update. Same rule as USING.
+- Status: NOT APPLIED. Apply only after a verified backup and the owner's explicit approval.
+- Local test (throwaway DB only): `PSQL=... PGHOST=... PGPORT=... PGUSER=... SCHEMA_SQL=... scripts/test-local-owner-update.sh`. Covers `properties` only; `clients` has the same policy shape but is not separately tested.
+- Known residual: an owner can still change `created_by` through the raw API (the app never sends it, `EDIT_EXCLUDE` covers it). Fixing that needs a trigger, a separate decision.
