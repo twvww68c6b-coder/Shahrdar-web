@@ -1298,10 +1298,12 @@ function applyLoggedInUser(profile){
   loadSavedAvatar();
 }
 async function signInWithUsername(username, password){
-  const {data:email,error:lookupError}=await shahrdarAuth.rpc('web_login_email',{p_username:username});
-  if(lookupError||!email) throw new Error('نام کاربری یا رمز عبور درست نیست.');
-  const {data,error}=await shahrdarAuth.auth.signInWithPassword({email,password});
-  if(error||!data.user) throw new Error('نام کاربری یا رمز عبور درست نیست.');
+  // Server-side login (Edge Function web-login): the account email is never sent to the browser.
+  const res=await fetch(`${SHAH_SUPABASE_URL}/functions/v1/web-login`,{method:'POST',headers:{'Content-Type':'application/json',apikey:SHAH_SUPABASE_KEY},body:JSON.stringify({username,password})}).catch(()=>null);
+  const s=res&&res.ok?await res.json().catch(()=>null):null;
+  if(!s||!s.access_token) throw new Error('نام کاربری یا رمز عبور درست نیست.');
+  const {data,error}=await shahrdarAuth.auth.setSession({access_token:s.access_token,refresh_token:s.refresh_token});
+  if(error||!data||!data.user) throw new Error('نام کاربری یا رمز عبور درست نیست.');
   return data.user;
 }
 document.getElementById('usernameLoginForm')?.addEventListener('submit',async(event)=>{
