@@ -49,7 +49,7 @@ function propertyCard(p: any, full: boolean): string {
   ];
   if (full) {
     lines.push(['آدرس دقیق', p.address], ['نام مالک', p.owner_name], ['شماره مالک', p.owner_phone],
-      ['مستأجر', p.tenant], ['نوع سند', p.document_type], ['توضیحات', p.description]);
+      ['مستأجر', p.tenant], ['نوع سند', p.document_type]);
   }
   const body = lines.filter(([, v]) => str(v) !== '' && str(v) !== '0').map(([k, v]) => `${k}: ${str(v)}`).join('\n');
   const tag = full ? 'نسخه کامل' : 'نسخه عمومی';
@@ -97,7 +97,7 @@ Deno.serve(async (req: Request) => {
     // Source record: the caller must be allowed to see it.
     const table = kind === 'property' ? 'properties' : 'clients';
     const cols = kind === 'property'
-      ? 'id,code,deal_type,property_type,area,sqm,bedrooms,floor_label,build_year,elevator,parking,storage,price,rent,deposit,ownership_type,owner_user_id,owner_name,owner_phone,address,tenant,document_type,description'
+      ? 'id,code,deal_type,property_type,area,sqm,bedrooms,floor_label,build_year,elevator,parking,storage,price,rent,deposit,ownership_type,owner_user_id,owner_name,owner_phone,address,tenant,document_type'
       : 'id,name,phone,deal_type,property_type,area,min_sqm,max_sqm,min_budget,max_budget,bedrooms,max_deposit,max_rent,ownership_type,owner_user_id';
     const rows = await sbGet<any[]>(`${table}?select=${cols}&id=eq.${id}&limit=1`);
     if (!rows.length || !visibleTo(rows[0], me)) return json({ error: 'not_found' }, 404);
