@@ -901,6 +901,7 @@ function openListModal(title,def){
 
 const DASH_NEGOTIATION=['🟡 در مذاکره','در مذاکره'];
 const DASH_SOLD_OTHER=/توسط دیگری/;
+const DASH_SOLD_BY_US=/توسط ما/;
 const DASH_NA='داده موجود نیست';
 function dashKey(v){return v?String(v).slice(0,10):'';}
 function dashAddDays(key,n){const d=new Date(key+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
@@ -929,7 +930,8 @@ function computeDashboard(data,f,activeStatuses){
     visits:inV.length,
     negotiations:props.filter(p=>DASH_NEGOTIATION.includes(p.status)).length,
     soldByOthers:props.filter(p=>DASH_SOLD_OTHER.test(p.status||'')).length,
-    contracts:DASH_NA, soldByUs:DASH_NA
+    contracts:props.filter(p=>DASH_SOLD_BY_US.test(p.status||'')&&Number(p.transaction_value)>0).length,
+    soldByUs:props.filter(p=>DASH_SOLD_BY_US.test(p.status||'')).length
   };
   let trend=null;
   if(from&&to){
@@ -950,7 +952,7 @@ function computeDashboard(data,f,activeStatuses){
       visits:inV.filter(v=>String(v.agent_id)===tg).length,
       activeFiles:props.filter(p=>String(p.created_by)===tg&&isActive(p)).length,
       negotiations:props.filter(p=>String(p.created_by)===tg&&DASH_NEGOTIATION.includes(p.status)).length,
-      contracts:DASH_NA,
+      contracts:props.filter(p=>String(p.created_by)===tg&&DASH_SOLD_BY_US.test(p.status||'')&&Number(p.transaction_value)>0).length,
       lastActivity:lastAct.get(String(u.id))||''};
   });
   const series={};
@@ -968,7 +970,7 @@ async function loadAdminDashboard(){
   host.className='';host.innerHTML='<div class="empty">در حال بارگذاری…</div>';
   const [cl,pr,vi,ac,us,wa]=await Promise.all([
     shahrdarAuth.from('clients').select('id,area,status,created_by,created_at').limit(5000),
-    shahrdarAuth.from('properties').select('id,area,status,created_by,created_at').limit(5000),
+    shahrdarAuth.from('properties').select('id,area,status,created_by,created_at,transaction_value').limit(5000),
     shahrdarAuth.from('visits').select('id,agent_id,visited_at').limit(5000),
     shahrdarAuth.from('activities').select('user_id,created_at').limit(5000),
     shahrdarAuth.from('users').select('id,name,role,telegram_id'),
@@ -1043,11 +1045,11 @@ function renderAdminDashboard(host){
   const tbody=document.createElement('tbody');
   const rows=[...r.team].sort((a,b)=>{const x=a[dashSort.key],y=b[dashSort.key];if(typeof x==='number'&&typeof y==='number') return (x-y)*dashSort.dir;return String(x).localeCompare(String(y),'fa')*dashSort.dir;});
   rows.forEach(row=>{const tr=document.createElement('tr');
-    [row.name,fmt(row.files),fmt(row.clients),fmt(row.visits),fmt(row.negotiations),DASH_NA,row.lastActivity?row.lastActivity.slice(0,16).replace('T',' '):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td);});
+    [row.name,fmt(row.files),fmt(row.clients),fmt(row.visits),fmt(row.negotiations),fmt(row.contracts),row.lastActivity?row.lastActivity.slice(0,16).replace('T',' '):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td);});
     tbody.appendChild(tr);});
   if(!rows.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=7;td.textContent='داده‌ای برای نمایش نیست.';tr.appendChild(td);tbody.appendChild(tr);}
   table.appendChild(tbody);wrap.appendChild(table);host.appendChild(wrap);
-  const note=document.createElement('p');note.className='notice';note.style.marginTop='8px';note.textContent='نرخ تبدیل بازدید به قرارداد و قراردادهای نهایی‌شده: در دیتابیس فعلی وضعیت قرارداد ثبت نمی‌شود، بنابراین محاسبه نشده است.';host.appendChild(note);
+  const note=document.createElement('p');note.className='notice';note.style.marginTop='8px';note.textContent='قرارداد نهایی = فایل با وضعیت «معامله شد - توسط ما» و ارزش معامله ثبت‌شده. نرخ تبدیل بازدید به قرارداد محاسبه نمی‌شود، چون بازدیدها به فایل قرارداد وصل نیستند.';host.appendChild(note);
   // Backup panel (unchanged behaviour)
   const bk=document.createElement('div');bk.className='panel';bk.style.marginTop='18px';
   bk.innerHTML='<div class="panel-title"><h3>بکاپ اطلاعات</h3><span>فایل JSON یا Excel</span></div><p class="notice">شامل مشتری‌ها، فایل‌ها، پیگیری‌ها، بازدیدها و لیست مشاوران است. فایل حاوی شماره تماس‌هاست؛ آن را امن نگه دار.</p>';
@@ -1135,6 +1137,8 @@ async function loadPerformance(){
      query:()=>shahrdarAuth.from('properties').select('id,code,area,sqm,price,property_type,status,deal_type,created_at,ownership_type,owner_user_id,is_urgent,created_by').eq('created_by',profile.telegramId).order('created_at',{ascending:false})},
     {label:'مذاکرات فعال',table:'properties',count:()=>shahrdarAuth.from('properties').select('id',{count:'exact',head:true}).eq('created_by',profile.telegramId).in('status',DASH_NEGOTIATION),
      query:()=>shahrdarAuth.from('properties').select('id,code,area,sqm,price,property_type,status,deal_type,created_at,ownership_type,owner_user_id,is_urgent,created_by').eq('created_by',profile.telegramId).in('status',DASH_NEGOTIATION).order('created_at',{ascending:false})},
+    {label:'قراردادهای نهایی‌شده',table:'properties',count:()=>shahrdarAuth.from('properties').select('id',{count:'exact',head:true}).eq('created_by',profile.telegramId).like('status','%توسط ما%').gt('transaction_value',0),
+     query:()=>shahrdarAuth.from('properties').select('id,code,area,sqm,price,property_type,status,deal_type,created_at,ownership_type,owner_user_id,is_urgent,created_by').eq('created_by',profile.telegramId).like('status','%توسط ما%').gt('transaction_value',0).order('created_at',{ascending:false})},
     {label:'پیگیری‌ها',table:null,columns:[['created_at','تاریخ'],['note','یادداشت']],count:()=>shahrdarAuth.from('activities').select('id',{count:'exact',head:true}).eq('user_id',profile.crmId).eq('activity_type','پیگیری'),
      query:()=>shahrdarAuth.from('activities').select('id,note,created_at').eq('user_id',profile.crmId).eq('activity_type','پیگیری').order('created_at',{ascending:false})},
     {label:'بازدیدها',table:null,count:()=>shahrdarAuth.from('visits').select('id',{count:'exact',head:true}).eq('agent_id',profile.telegramId),
@@ -1150,7 +1154,6 @@ async function loadPerformance(){
     btn.onclick=()=>openListModal(d.label,d);
     host.appendChild(btn);
   });
-  const na=document.createElement('p');na.className='notice';na.style.gridColumn='1 / -1';na.textContent='قراردادهای نهایی‌شده: '+DASH_NA+' (وضعیت قرارداد در دیتابیس ثبت نمی‌شود).';host.appendChild(na);
 }
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('stat-link')){e.preventDefault();e.target.click();}});
 const PROPERTY_LABELS={responsible:'مسئول',code:'کد فایل',deal_type:'نوع معامله',rent_type:'نوع اجاره',area:'محله',address:'آدرس',sqm:'متراژ',price:'قیمت فروش',deposit:'ودیعه',rent:'اجاره ماهانه',property_type:'نوع ملک',bedrooms:'اتاق',floors:'طبقات ساختمان',unit_floor:'طبقه واحد',elevator:'آسانسور',parking:'پارکینگ',parking_type:'نوع پارکینگ',storage:'انباری',tenant:'وضعیت تصرف',vacancy_date:'تاریخ تخلیه',document_type:'نوع سند',owner_name:'نام مالک',owner_phone:'تلفن مالک',description:'توضیحات',status:'وضعیت',transaction_value:'مبلغ معامله',created_at:'ثبت',updated_at:'آخرین ویرایش'};

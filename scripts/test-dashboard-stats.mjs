@@ -24,6 +24,8 @@ const data = {
     { id: 2, area: 'ب', status: '🟡 در مذاکره', created_by: 222, created_at: '2026-10-05T10:00:00' },
     { id: 3, area: 'الف', status: '🟣 معامله شد - توسط دیگری', created_by: 333, created_at: '2026-10-06T10:00:00' },
     { id: 4, area: 'ب', status: '🟢 فعال', created_by: 333, created_at: '2026-09-20T10:00:00' },
+    { id: 5, area: 'الف', status: '🔵 معامله شد - توسط ما', created_by: 222, created_at: '2026-10-03T10:00:00', transaction_value: 10800000000 },
+    { id: 6, area: 'الف', status: '🔵 معامله شد - توسط ما', created_by: 333, created_at: '2026-10-04T10:00:00', transaction_value: 0 },
   ],
   clients: [
     { id: 1, area: 'الف', status: 'فعال', created_by: 222, created_at: '2026-10-02T09:00:00' },
@@ -42,15 +44,15 @@ const base = { from: '', to: '', consultantTg: '', area: '', propStatus: '', cli
 const r = computeDashboard(data, base, ACTIVE);
 ok('active consultants counts only enabled consultant access', r.cards.activeConsultants === 1, `got ${r.cards.activeConsultants}`);
 ok('active files = active statuses', r.cards.activeFiles === 3, `got ${r.cards.activeFiles}`);
+ok('sold by us from status (2 files)', r.cards.soldByUs === 2, `got ${r.cards.soldByUs}`);
+ok('contracts = sold by us with transaction value (1)', r.cards.contracts === 1, `got ${r.cards.contracts}`);
 ok('active clients = status فعال', r.cards.activeClients === 1, `got ${r.cards.activeClients}`);
 ok('visits total', r.cards.visits === 2);
 ok('negotiations from status', r.cards.negotiations === 1, `got ${r.cards.negotiations}`);
 ok('sold by others from status', r.cards.soldByOthers === 1, `got ${r.cards.soldByOthers}`);
-ok('contracts marked not available (no data)', r.cards.contracts === 'داده موجود نیست');
-ok('sold by us marked not available', r.cards.soldByUs === 'داده موجود نیست');
 ok('no trend without range', r.trend === null);
 const a = r.team.find(t => t.id === 2), b = r.team.find(t => t.id === 3);
-ok('team: files of consultant A', a.files === 2, `got ${a.files}`);
+ok('team: files of consultant A', a.files === 3, `got ${a.files}`);
 ok('team: clients of consultant A', a.clients === 1);
 ok('team: visits of consultant A', a.visits === 1);
 ok('team: last activity from activities', a.lastActivity === '2026-10-09T08:00:00');
@@ -60,7 +62,7 @@ const f = computeDashboard(data, { ...base, consultantTg: '222' }, ACTIVE);
 ok('consultant filter limits files', f.cards.activeFiles === 2, `got ${f.cards.activeFiles}`);
 ok('consultant filter limits visits', f.cards.visits === 1);
 const d = computeDashboard(data, { ...base, from: '2026-10-01', to: '2026-10-07' }, ACTIVE);
-ok('date range counts new files in range', d.trend.files.now === 3, `got ${d.trend.files.now}`);
+ok('date range counts new files in range', d.trend.files.now === 5, `got ${d.trend.files.now}`);
 ok('trend uses previous equal-length range (no files 24-30 Sep)', d.trend.files.prev === 0, `got ${d.trend.files.prev}`);
 ok('trend clients now', d.trend.clients.now === 2);
 const w = computeDashboard(data, { ...base, mode: 'week' }, ACTIVE);
@@ -69,6 +71,7 @@ const m = computeDashboard(data, { ...base, mode: 'month' }, ACTIVE);
 ok('monthly buckets keyed by YYYY-MM', m.buckets.every(x => /^\d{4}-\d{2}$/.test(x.key)));
 const area = computeDashboard(data, { ...base, area: 'الف' }, ACTIVE);
 ok('area filter applies to files and clients', area.cards.activeFiles === 1 && area.cards.activeClients === 1, `files ${area.cards.activeFiles}`);
+ok('team contracts for consultant A', a.contracts === 1, `got ${a.contracts}`);
 const e = computeDashboard({ users: [], properties: [], clients: [], visits: [], activities: [], access: [] }, base, ACTIVE);
 ok('empty data yields zeros and no buckets', e.cards.activeFiles === 0 && e.buckets.length === 0 && e.team.length === 0);
 const bad = computeDashboard({ ...data, visits: [...data.visits, { id: 9, agent_id: 222, visited_at: null }] }, base, ACTIVE);
