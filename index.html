@@ -28,6 +28,7 @@ body.auth-required .tg-login-screen{display:flex}
 .row-menu:hover{border-color:var(--gold);background:var(--surface2)}
 .danger{border:1px solid #633b43;background:#2b171d;color:#ffb1b1;border-radius:12px;padding:10px 14px;font:inherit;cursor:pointer}
 .danger:disabled{opacity:.4;cursor:not-allowed}
+.dash-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px}.dash-field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted,#9aa3b2)}.dash-field select,.dash-field input{min-width:130px;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--text)}@media (max-width:600px){.dash-field select,.dash-field input{min-width:0;width:100%}.dash-field{flex:1 1 100%}}
 </style></head>
 <body class="auth-required">
 <div id="telegramLoginScreen" class="tg-login-screen">
@@ -898,52 +899,160 @@ function openListModal(title,def){
   })();
 }
 
+const DASH_NEGOTIATION=['🟡 در مذاکره','در مذاکره'];
+const DASH_SOLD_OTHER=/توسط دیگری/;
+const DASH_NA='داده موجود نیست';
+function dashKey(v){return v?String(v).slice(0,10):'';}
+function dashAddDays(key,n){const d=new Date(key+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function dashBucket(key,mode){
+  if(mode==='month') return key.slice(0,7);
+  if(mode==='week'){const d=new Date(key+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));return d.toISOString().slice(0,10);}
+  return key;
+}
+// Pure aggregation over rows already read through RLS. Dates are YYYY-MM-DD strings.
+function computeDashboard(data,f,activeStatuses){
+  const from=f.from||'',to=f.to||'',who=f.consultantTg?String(f.consultantTg):'';
+  const inRange=(key,a,b)=>!!key&&(!a||key>=a)&&(!b||key<=b);
+  const props=(data.properties||[]).filter(p=>(!who||String(p.created_by)===who)&&(!f.area||p.area===f.area)&&(!f.propStatus||p.status===f.propStatus));
+  const clients=(data.clients||[]).filter(c=>(!who||String(c.created_by)===who)&&(!f.area||c.area===f.area)&&(!f.clientStatus||c.status===f.clientStatus));
+  const visits=(data.visits||[]).filter(v=>!who||String(v.agent_id)===who);
+  const inP=props.filter(p=>inRange(dashKey(p.created_at),from,to));
+  const inC=clients.filter(c=>inRange(dashKey(c.created_at),from,to));
+  const inV=visits.filter(v=>inRange(dashKey(v.visited_at),from,to));
+  const isActive=p=>activeStatuses.includes(p.status);
+  const enabledIds=new Set((data.access||[]).filter(a=>a.enabled).map(a=>Number(a.crm_user_id)));
+  const consultants=(data.users||[]).filter(u=>u.role==='مشاور'&&enabledIds.has(Number(u.id)));
+  const cards={
+    activeConsultants:consultants.length,
+    activeFiles:props.filter(isActive).length,
+    activeClients:clients.filter(c=>c.status==='فعال').length,
+    visits:inV.length,
+    negotiations:props.filter(p=>DASH_NEGOTIATION.includes(p.status)).length,
+    soldByOthers:props.filter(p=>DASH_SOLD_OTHER.test(p.status||'')).length,
+    contracts:DASH_NA, soldByUs:DASH_NA
+  };
+  let trend=null;
+  if(from&&to){
+    const days=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;
+    const pTo=dashAddDays(from,-1),pFrom=dashAddDays(from,-days);
+    const prev=(arr,field)=>arr.filter(r=>inRange(dashKey(r[field]),pFrom,pTo)).length;
+    trend={files:{now:inP.length,prev:prev(props,'created_at')},clients:{now:inC.length,prev:prev(clients,'created_at')},visits:{now:inV.length,prev:prev(visits,'visited_at')}};
+  }
+  const byTg=new Map();
+  (data.users||[]).forEach(u=>{if(u.telegram_id!=null) byTg.set(String(u.telegram_id),u);});
+  const lastAct=new Map();
+  (data.activities||[]).forEach(a=>{const k=String(a.user_id),d=String(a.created_at||'');if(d&&(!lastAct.has(k)||d>lastAct.get(k))) lastAct.set(k,d);});
+  const team=(data.users||[]).filter(u=>u.telegram_id!=null&&(u.role==='مشاور'||u.role==='مدیر')).map(u=>{
+    const tg=String(u.telegram_id);
+    return {id:u.id,name:u.name||('شناسه '+u.id),role:u.role,
+      files:inP.filter(p=>String(p.created_by)===tg).length,
+      clients:inC.filter(c=>String(c.created_by)===tg).length,
+      visits:inV.filter(v=>String(v.agent_id)===tg).length,
+      activeFiles:props.filter(p=>String(p.created_by)===tg&&isActive(p)).length,
+      negotiations:props.filter(p=>String(p.created_by)===tg&&DASH_NEGOTIATION.includes(p.status)).length,
+      contracts:DASH_NA,
+      lastActivity:lastAct.get(String(u.id))||''};
+  });
+  const series={};
+  const add=(key,kind)=>{const b=dashBucket(key,f.mode||'day');series[b]=series[b]||{files:0,clients:0,visits:0};series[b][kind]++;};
+  inP.forEach(p=>add(dashKey(p.created_at),'files'));
+  inC.forEach(c=>add(dashKey(c.created_at),'clients'));
+  inV.forEach(v=>add(dashKey(v.visited_at),'visits'));
+  const buckets=Object.keys(series).sort().slice(-30).map(k=>({key:k,...series[k]}));
+  return {cards,trend,team,buckets,areas:[...new Set((data.properties||[]).map(p=>p.area).filter(Boolean))].sort(),propStatuses:[...new Set((data.properties||[]).map(p=>p.status).filter(Boolean))].sort(),clientStatuses:[...new Set((data.clients||[]).map(c=>c.status).filter(Boolean))].sort()};
+}
 async function loadAdminDashboard(){
   const host=document.getElementById('adminDash'); if(!host) return;
   const profile=await getCrmProfile().catch(()=>null);
   if(!profile||profile.role!=='مدیر'){host.className='empty';host.textContent='این بخش فقط برای مدیر است.';return;}
   host.className='';host.innerHTML='<div class="empty">در حال بارگذاری…</div>';
-  const [cl,pr,names]=await Promise.all([
-    shahrdarAuth.from('clients').select('id,owner_user_id,is_urgent,status,created_by'),
-    shahrdarAuth.from('properties').select('id,owner_user_id,is_urgent,status,deal_type,created_by'),
-    getStaffNames()
+  const [cl,pr,vi,ac,us,wa]=await Promise.all([
+    shahrdarAuth.from('clients').select('id,area,status,created_by,created_at').limit(5000),
+    shahrdarAuth.from('properties').select('id,area,status,created_by,created_at').limit(5000),
+    shahrdarAuth.from('visits').select('id,agent_id,visited_at').limit(5000),
+    shahrdarAuth.from('activities').select('user_id,created_at').limit(5000),
+    shahrdarAuth.from('users').select('id,name,role,telegram_id'),
+    shahrdarAuth.from('web_user_access').select('crm_user_id,enabled')
   ]);
-  if(cl.error||pr.error){host.textContent='دریافت اطلاعات داشبورد انجام نشد؛ دسترسی را بررسی کن.';return;}
-  const clients=cl.data||[], props=pr.data||[];
-  const urgentC=clients.filter(c=>Number(c.is_urgent)===1).length;
-  const urgentP=props.filter(p=>Number(p.is_urgent)===1).length;
-  const activeP=props.filter(p=>PROPERTY_ACTIVE_STATUSES.includes(p.status)).length;
-  const per={};
-  const bump=(id,key)=>{if(!id) return;per[id]=per[id]||{clients:0,props:0,urgent:0};per[id][key]++;};
-  clients.forEach(c=>{bump(c.owner_user_id,'clients');if(Number(c.is_urgent)===1) bump(c.owner_user_id,'urgent');});
-  props.forEach(p=>{bump(p.owner_user_id,'props');if(Number(p.is_urgent)===1) bump(p.owner_user_id,'urgent');});
+  const failed=[cl,pr,vi,ac,us,wa].find(x=>x.error);
+  if(failed){console.error('dashboard',failed.error);host.textContent='دریافت اطلاعات داشبورد انجام نشد؛ دسترسی را بررسی کن.';return;}
+  dashData={clients:cl.data||[],properties:pr.data||[],visits:vi.data||[],activities:ac.data||[],users:us.data||[],access:wa.data||[]};
+  renderAdminDashboard(host);
+}
+let dashData=null;
+let dashControls=null;
+let dashSort={key:'files',dir:-1};
+function renderAdminDashboard(host){
+  const ctl=dashControls||(dashControls={from:'',to:'',consultantTg:'',area:'',propStatus:'',clientStatus:'',mode:'day'});
+  const r=computeDashboard(dashData,ctl,PROPERTY_ACTIVE_STATUSES);
   host.innerHTML='';
-  const fmt=v=>Number(v).toLocaleString('fa-IR');
-  const stats=document.createElement('div');stats.className='stats';
-  [['مشتریان',clients.length],['فایل‌ها',props.length],['فایل‌های فعال',activeP],['موارد فوری',urgentC+urgentP]].forEach(([label,val])=>{
-    const a=document.createElement('article');a.className='stat';
-    a.innerHTML='<div class="stat-top"><span></span></div><strong></strong>';
-    a.querySelector('span').textContent=label; a.querySelector('strong').textContent=fmt(val);
-    stats.appendChild(a);
-  });
-  host.appendChild(stats);
-  const wrap=document.createElement('div');wrap.className='table-wrap';
+  const fmt=v=>typeof v==='number'?v.toLocaleString('fa-IR'):String(v);
+  const truncated=['clients','properties','visits','activities'].some(k=>(dashData[k]||[]).length>=5000);
+  if(truncated){const w=document.createElement('p');w.className='notice';w.textContent='هشدار: برخی جدول‌ها به سقف ۵۰۰۰ ردیف رسیده‌اند؛ آمار ممکن است ناقص باشد.';host.appendChild(w);}
+  // Filters
+  const bar=document.createElement('div');bar.className='dash-filters';
+  const sel=(label,key,opts)=>{const w=document.createElement('label');w.className='dash-field';const s=document.createElement('span');s.textContent=label;const e=document.createElement('select');
+    e.innerHTML='';const o0=document.createElement('option');o0.value='';o0.textContent='همه';e.appendChild(o0);
+    opts.forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;e.appendChild(o);});
+    e.value=ctl[key]||'';e.onchange=()=>{ctl[key]=e.value;renderAdminDashboard(host);};w.append(s,e);return w;};
+  const dateIn=(label,key)=>{const w=document.createElement('label');w.className='dash-field';const s=document.createElement('span');s.textContent=label;const e=document.createElement('input');e.type='date';e.value=ctl[key]||'';e.onchange=()=>{ctl[key]=e.value;renderAdminDashboard(host);};w.append(s,e);return w;};
+  const staff=dashData.users.filter(u=>u.telegram_id!=null&&(u.role==='مشاور'||u.role==='مدیر')).map(u=>[String(u.telegram_id),u.name||('شناسه '+u.id)]);
+  bar.append(
+    dateIn('از تاریخ','from'),dateIn('تا تاریخ','to'),
+    sel('مشاور','consultantTg',staff),
+    sel('منطقه','area',r.areas.map(a=>[a,a])),
+    sel('وضعیت ملک','propStatus',r.propStatuses.map(s=>[s,s])),
+    sel('وضعیت مشتری','clientStatus',r.clientStatuses.map(s=>[s,s])),
+    sel('دوره نمودار','mode',[['day','روزانه'],['week','هفتگی'],['month','ماهانه']]));
+  const reset=document.createElement('button');reset.type='button';reset.className='ghost';reset.textContent='پاک کردن فیلترها';
+  reset.onclick=()=>{Object.assign(ctl,{from:'',to:'',consultantTg:'',area:'',propStatus:'',clientStatus:'',mode:'day'});renderAdminDashboard(host);};
+  bar.appendChild(reset);host.appendChild(bar);
+  // Cards
+  const cards=document.createElement('div');cards.className='stats';
+  const cardDefs=[
+    ['مشاوران فعال',r.cards.activeConsultants],['فایل‌های فعال',r.cards.activeFiles],['مشتریان فعال',r.cards.activeClients],
+    ['بازدیدها',r.cards.visits],['مذاکرات در جریان',r.cards.negotiations],['قراردادهای نهایی‌شده',r.cards.contracts],
+    ['فایل‌های فروخته‌شده توسط مجموعه',r.cards.soldByUs],['فایل‌های ازدست‌رفته یا فروخته‌شده توسط دیگران',r.cards.soldByOthers]];
+  cardDefs.forEach(([label,val])=>{const a=document.createElement('article');a.className='stat';a.innerHTML='<div class="stat-top"><span></span></div><strong></strong>';a.querySelector('span').textContent=label;a.querySelector('strong').textContent=typeof val==='number'?fmt(val):DASH_NA;if(typeof val!=='number') a.querySelector('strong').style.fontSize='13px';cards.appendChild(a);});
+  host.appendChild(cards);
+  if(r.trend){const t=document.createElement('p');t.className='notice';const pct=(n,p)=>p>0?(((n-p)/p)*100).toFixed(0)+'٪':'داده کافی برای مقایسه نیست';
+    t.textContent=`نسبت به دوره قبل — فایل‌ها: ${pct(r.trend.files.now,r.trend.files.prev)} · مشتری‌ها: ${pct(r.trend.clients.now,r.trend.clients.prev)} · بازدیدها: ${pct(r.trend.visits.now,r.trend.visits.prev)}`;host.appendChild(t);}
+  // Chart
+  const chartPanel=document.createElement('div');chartPanel.className='panel';chartPanel.style.marginTop='16px';
+  chartPanel.innerHTML='<div class="panel-title"><h3>روند ثبت‌ها</h3><span>فایل، مشتری و بازدید</span></div>';
+  if(!r.buckets.length){const e=document.createElement('div');e.className='empty';e.textContent='داده‌ای در این بازه ثبت نشده است.';chartPanel.appendChild(e);}
+  else{
+    const max=Math.max(1,...r.buckets.map(b=>Math.max(b.files,b.clients,b.visits)));
+    const chart=document.createElement('div');chart.style.cssText='display:flex;align-items:flex-end;gap:6px;height:160px;overflow-x:auto;padding:8px 0';
+    r.buckets.forEach(b=>{const col=document.createElement('div');col.style.cssText='display:flex;flex-direction:column;align-items:center;min-width:28px;gap:4px';
+      const bars=document.createElement('div');bars.style.cssText='display:flex;align-items:flex-end;gap:2px;height:120px';
+      [['files','#d8b56b'],['clients','#7aa2d6'],['visits','#8fbf8f']].forEach(([k,c])=>{const bar=document.createElement('div');bar.title=`${b.key} · ${k}: ${b[k]}`;bar.style.cssText=`width:8px;background:${c};border-radius:3px 3px 0 0;height:${Math.round(b[k]/max*120)}px`;bars.appendChild(bar);});
+      const lab=document.createElement('small');lab.textContent=b.key.slice(5);lab.style.fontSize='10px';col.append(bars,lab);chart.appendChild(col);});
+    chartPanel.appendChild(chart);
+    const legend=document.createElement('p');legend.className='notice';legend.textContent='طلایی: فایل · آبی: مشتری · سبز: بازدید';chartPanel.appendChild(legend);
+  }
+  host.appendChild(chartPanel);
+  // Team table
+  const wrap=document.createElement('div');wrap.className='table-wrap';wrap.style.marginTop='16px';
   const table=document.createElement('table');
-  table.innerHTML='<thead><tr><th>مشاور</th><th>مشتریان</th><th>فایل‌ها</th><th>فوری</th></tr></thead>';
+  const cols=[['name','مشاور'],['files','فایل‌ها'],['clients','مشتری‌ها'],['visits','بازدیدها'],['negotiations','مذاکرات فعال'],['contracts','قراردادها'],['lastActivity','آخرین فعالیت']];
+  const thead=document.createElement('thead');const hr=document.createElement('tr');
+  cols.forEach(([k,t])=>{const th=document.createElement('th');th.style.cursor=k==='name'||k==='contracts'?'default':'pointer';th.textContent=t+(dashSort.key===k?(dashSort.dir<0?' ▼':' ▲'):'');
+    if(k!=='name'&&k!=='contracts') th.onclick=()=>{dashSort={key:k,dir:dashSort.key===k?-dashSort.dir:-1};renderAdminDashboard(host);};hr.appendChild(th);});
+  thead.appendChild(hr);table.appendChild(thead);
   const tbody=document.createElement('tbody');
-  Object.keys(per).sort((x,y)=>(names[x]||'').localeCompare(names[y]||'','fa')).forEach(id=>{
-    const r=per[id]; const tr=document.createElement('tr');
-    [names[id]||('شناسه '+id),fmt(r.clients),fmt(r.props),fmt(r.urgent)].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td);});
-    tbody.appendChild(tr);
-  });
-  if(!tbody.children.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=4;td.textContent='داده‌ای ثبت نشده است.';tr.appendChild(td);tbody.appendChild(tr);}
+  const rows=[...r.team].sort((a,b)=>{const x=a[dashSort.key],y=b[dashSort.key];if(typeof x==='number'&&typeof y==='number') return (x-y)*dashSort.dir;return String(x).localeCompare(String(y),'fa')*dashSort.dir;});
+  rows.forEach(row=>{const tr=document.createElement('tr');
+    [row.name,fmt(row.files),fmt(row.clients),fmt(row.visits),fmt(row.negotiations),DASH_NA,row.lastActivity?row.lastActivity.slice(0,16).replace('T',' '):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td);});
+    tbody.appendChild(tr);});
+  if(!rows.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=7;td.textContent='داده‌ای برای نمایش نیست.';tr.appendChild(td);tbody.appendChild(tr);}
   table.appendChild(tbody);wrap.appendChild(table);host.appendChild(wrap);
+  const note=document.createElement('p');note.className='notice';note.style.marginTop='8px';note.textContent='نرخ تبدیل بازدید به قرارداد و قراردادهای نهایی‌شده: در دیتابیس فعلی وضعیت قرارداد ثبت نمی‌شود، بنابراین محاسبه نشده است.';host.appendChild(note);
+  // Backup panel (unchanged behaviour)
   const bk=document.createElement('div');bk.className='panel';bk.style.marginTop='18px';
   bk.innerHTML='<div class="panel-title"><h3>بکاپ اطلاعات</h3><span>فایل JSON یا Excel</span></div><p class="notice">شامل مشتری‌ها، فایل‌ها، پیگیری‌ها، بازدیدها و لیست مشاوران است. فایل حاوی شماره تماس‌هاست؛ آن را امن نگه دار.</p>';
-  const btn=document.createElement('button');btn.className='primary';btn.type='button';btn.textContent='دانلود بکاپ اطلاعات';
-  btn.onclick=()=>downloadBackup(btn);
-  const xbtn=document.createElement('button');xbtn.className='ghost';xbtn.type='button';xbtn.style.marginRight='8px';xbtn.textContent='دانلود بکاپ Excel';
-  xbtn.onclick=()=>downloadBackupExcel(xbtn);
+  const btn=document.createElement('button');btn.className='primary';btn.type='button';btn.textContent='دانلود بکاپ اطلاعات';btn.onclick=()=>downloadBackup(btn);
+  const xbtn=document.createElement('button');xbtn.className='ghost';xbtn.type='button';xbtn.style.marginRight='8px';xbtn.textContent='دانلود بکاپ Excel';xbtn.onclick=()=>downloadBackupExcel(xbtn);
   bk.append(btn,xbtn);host.appendChild(bk);
 }
 async function fetchBackupPayload(){
