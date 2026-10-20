@@ -114,7 +114,7 @@ Deno.serve(async (req: Request) => {
       await tg('sendMessage', { chat_id: chatId, text });
       result.sent_text = true;
     } catch (e) {
-      return json({ ok: false, error: 'telegram: ' + (e as Error).message }, 502);
+      return json({ ok: false, error: 'telegram_send_failed' }, 502);
     }
 
     // Photos are only for property files and are re-sent by file_id (max 5), nothing is stored.
