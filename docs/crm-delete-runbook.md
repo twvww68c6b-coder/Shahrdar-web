@@ -54,3 +54,10 @@ SUPABASE_URL=https://igunsreoursotuxqpyfs.supabase.co SUPABASE_ANON_KEY=<publish
 - در این مخزن نوشته شده و تست محلی با شبیه‌سازی Supabase موفق است.
 - **deploy نشده** و پنل هنوز از روش فعلی استفاده می‌کند.
 - ترتیب امن: deploy با `verify_jwt=false`، تغییر کلاینت به این Function، تست ورود، و سپس بستن `anon` روی `web_login_email` (مرحله‌ی B در فایل `20261020000400`).
+
+## Pending migration: owner-update policy (`20261020000500`)
+- Problem: a consultant who owns a record but did not create it can see it but cannot save edits (UPDATE `WITH CHECK` requires `created_by`).
+- Fix: owner OR creator (or admin) may update. Same rule as USING.
+- Status: NOT APPLIED. Apply only after a verified backup and the owner's explicit approval.
+- Local test (throwaway DB only): `PSQL=... PGHOST=... PGPORT=... PGUSER=... SCHEMA_SQL=... scripts/test-local-owner-update.sh`. Covers `properties` only; `clients` has the same policy shape but is not separately tested.
+- Known residual: an owner can still change `created_by` through the raw API (the app never sends it, `EDIT_EXCLUDE` covers it). Fixing that needs a trigger, a separate decision.
