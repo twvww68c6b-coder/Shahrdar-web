@@ -19,4 +19,10 @@ ok('state default is active', /clients:\{page:0,sort:'created_desc',q:'',status:
 ok('client form has the three requested statuses', ['منصرف شده', 'خرید کرده توسط ما', 'خرید کرده توسط دیگری'].every(v => html.includes(`<option>${v}</option>`)));
 ok('client form keeps legacy خرید کرده (no silent reset on edit)', html.includes('<option>خرید کرده</option></select>'));
 console.log(fail ? 'LIST FILTER CHECKS FAILED' : 'ALL LIST FILTER CHECKS PASSED (logic + markup)');
-process.exit(fail);
+// Active clients view must also include clients with an empty status.
+{
+  const src = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const ok2 = src.includes("q.or('status.eq.فعال,status.is.null')");
+  console.log((ok2 ? 'PASS' : 'FAIL') + ' clients active view includes empty-status clients');
+  if (!ok2) process.exit(1);
+}

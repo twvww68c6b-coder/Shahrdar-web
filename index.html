@@ -219,7 +219,8 @@ async function loadListPage(kind){
   let q=shahrdarAuth.from(isC?'clients':'properties').select(isC?CLIENT_SELECT:PROPERTY_SELECT,{count:'exact'});
   q=visibleToProfile(saleOnlyQuery(q),profile);
   const statusVals=listStatusValues(kind,st.status||'active');
-  if(statusVals) q=q.in('status',statusVals);
+  // clients: فعال‌ها also includes clients whose status was never set
+  if(statusVals) q=(isC&&st.status==='active')?q.or('status.eq.فعال,status.is.null'):q.in('status',statusVals);
   if(term) q=q.or(LIST_SEARCH_COLS[kind].map(c=>`${c}.ilike.*${term}*`).join(','));
   const from=st.page*LIST_PAGE_SIZE;
   const {data,error,count}=await q.order(col,{ascending:asc,nullsFirst:false}).order('id',{ascending:false}).range(from,from+LIST_PAGE_SIZE-1);
