@@ -17,7 +17,8 @@ ok('properties sold = two sold statuses', ctx.listStatusValues('properties', 'so
 ok('properties all = no status filter', ctx.listStatusValues('properties', 'all') === null);
 ok('state default is active', /clients:\{page:0,sort:'created_desc',q:'',status:'active',area:''\}/.test(html) && /properties:\{page:0,sort:'created_desc',q:'',status:'active',area:''\}/.test(html));
 ok('client form has the three requested statuses', ['منصرف شده', 'خرید کرده توسط ما', 'خرید کرده توسط دیگری'].every(v => html.includes(`<option>${v}</option>`)));
-ok('client form keeps legacy خرید کرده (no silent reset on edit)', html.includes('<option>خرید کرده</option></select>'));
+ok('client status picker no longer offers plain خرید کرده', !html.includes('<option>خرید کرده</option></select>') && html.includes('<option>خرید کرده توسط دیگری</option></select>'));
+ok('legacy خرید کرده is kept on edit via a data-legacy option (no silent reset)', html.includes("o.dataset.legacy='1'") && html.includes("el.querySelectorAll('option[data-legacy]')"));
 console.log(fail ? 'LIST FILTER CHECKS FAILED' : 'ALL LIST FILTER CHECKS PASSED (logic + markup)');
 // Active clients view must also include clients with an empty status.
 {
