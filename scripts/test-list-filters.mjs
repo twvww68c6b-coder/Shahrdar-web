@@ -15,7 +15,7 @@ ok('clients all = no status filter', ctx.listStatusValues('clients', 'all') === 
 ok('properties default-active = active statuses', eq(ctx.listStatusValues('properties', 'active'), ['🟢 فعال', '🟡 در مذاکره', 'فعال', 'در مذاکره']));
 ok('properties sold = two sold statuses', ctx.listStatusValues('properties', 'sold').length === 2);
 ok('properties all = no status filter', ctx.listStatusValues('properties', 'all') === null);
-ok('state default is active', /clients:\{page:0,sort:'created_desc',q:'',status:'active'\}/.test(html) && /properties:\{page:0,sort:'created_desc',q:'',status:'active'\}/.test(html));
+ok('state default is active', /clients:\{page:0,sort:'created_desc',q:'',status:'active',area:''\}/.test(html) && /properties:\{page:0,sort:'created_desc',q:'',status:'active',area:''\}/.test(html));
 ok('client form has the three requested statuses', ['منصرف شده', 'خرید کرده توسط ما', 'خرید کرده توسط دیگری'].every(v => html.includes(`<option>${v}</option>`)));
 ok('client form keeps legacy خرید کرده (no silent reset on edit)', html.includes('<option>خرید کرده</option></select>'));
 console.log(fail ? 'LIST FILTER CHECKS FAILED' : 'ALL LIST FILTER CHECKS PASSED (logic + markup)');
@@ -26,11 +26,12 @@ console.log(fail ? 'LIST FILTER CHECKS FAILED' : 'ALL LIST FILTER CHECKS PASSED 
   console.log((ok2 ? 'PASS' : 'FAIL') + ' clients active view includes empty-status clients');
   if (!ok2) process.exit(1);
 }
-// Neighborhood (area) sort exists for both lists, in both directions.
+// Neighborhood (محله) is a filter chosen from a list, not an alphabetical sort.
 {
   const src = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  const ok3 = src.includes("clients:{created_desc:['created_at',false]") && /area_asc:\['area',true\],area_desc:\['area',false\]\}/.test(src)
-    && src.includes("area_asc:'محله از الف تا ی',area_desc:'محله از ی تا الف'");
-  console.log((ok3 ? 'PASS' : 'FAIL') + ' neighborhood sort (area asc/desc) for clients and files');
-  if (!ok3) process.exit(1);
+  const noAreaSort = !/area_(asc|desc)/.test(src);
+  const hasFilter = src.includes("if(st.area) q=q.eq('area',st.area);") && src.includes('function openAreaMenu(kind,btn)') && src.includes('function loadAreaOptions(kind)');
+  const ok4 = noAreaSort && hasFilter && /area:''\}/.test(src);
+  console.log((ok4 ? 'PASS' : 'FAIL') + ' neighborhood filter from a list (no alphabetical area sort)');
+  if (!ok4) process.exit(1);
 }

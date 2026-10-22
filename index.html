@@ -179,17 +179,17 @@ function renderCrmTable(hostId,rows,columns,searchId){
 }
 const LIST_PAGE_SIZE=20;
 const LIST_SORTS={
- clients:{created_desc:['created_at',false],created_asc:['created_at',true],budget_desc:['max_budget',false],budget_asc:['max_budget',true],area_asc:['area',true],area_desc:['area',false]},
- properties:{created_desc:['created_at',false],created_asc:['created_at',true],price_desc:['price',false],price_asc:['price',true],sqm_asc:['sqm',true],sqm_desc:['sqm',false],area_asc:['area',true],area_desc:['area',false]}
+ clients:{created_desc:['created_at',false],created_asc:['created_at',true],budget_desc:['max_budget',false],budget_asc:['max_budget',true]},
+ properties:{created_desc:['created_at',false],created_asc:['created_at',true],price_desc:['price',false],price_asc:['price',true],sqm_asc:['sqm',true],sqm_desc:['sqm',false]}
 };
 const LIST_SORT_LABELS={
- clients:{created_desc:'جدیدترین به قدیمی‌ترین',created_asc:'قدیمی‌ترین به جدیدترین',budget_desc:'بودجه از زیاد به کم',budget_asc:'بودجه از کم به زیاد',area_asc:'محله از الف تا ی',area_desc:'محله از ی تا الف'},
- properties:{created_desc:'جدیدترین به قدیمی‌ترین',created_asc:'قدیمی‌ترین به جدیدترین',price_desc:'قیمت از زیاد به کم',price_asc:'قیمت از کم به زیاد',sqm_asc:'متراژ از کم به زیاد',sqm_desc:'متراژ از زیاد به کم',area_asc:'محله از الف تا ی',area_desc:'محله از ی تا الف'}
+ clients:{created_desc:'جدیدترین به قدیمی‌ترین',created_asc:'قدیمی‌ترین به جدیدترین',budget_desc:'بودجه از زیاد به کم',budget_asc:'بودجه از کم به زیاد'},
+ properties:{created_desc:'جدیدترین به قدیمی‌ترین',created_asc:'قدیمی‌ترین به جدیدترین',price_desc:'قیمت از زیاد به کم',price_asc:'قیمت از کم به زیاد',sqm_asc:'متراژ از کم به زیاد',sqm_desc:'متراژ از زیاد به کم'}
 };
 const LIST_SEARCH_COLS={clients:['name','phone','area'],properties:['code','area','property_type']};
 const CLIENT_SELECT='id,name,phone,area,max_budget,status,description,created_at,deal_type,ownership_type,owner_user_id,is_urgent';
 const PROPERTY_SELECT='id,code,area,sqm,price,property_type,status,deal_type,created_at,ownership_type,owner_user_id,is_urgent';
-const listState={clients:{page:0,sort:'created_desc',q:'',status:'active'},properties:{page:0,sort:'created_desc',q:'',status:'active'}};
+const listState={clients:{page:0,sort:'created_desc',q:'',status:'active',area:''},properties:{page:0,sort:'created_desc',q:'',status:'active',area:''}};
 const LIST_STATUS_VALUES={
  clients:{active:['فعال'],bought:['خرید کرده','خرید کرده توسط ما','خرید کرده توسط دیگری'],cancelled:['منصرف شده'],all:null},
  properties:{active:null,sold:['🔵 معامله شد - توسط ما','🟣 معامله شد - توسط دیگری'],all:null}
@@ -221,6 +221,7 @@ async function loadListPage(kind){
   const statusVals=listStatusValues(kind,st.status||'active');
   // clients: فعال‌ها also includes clients whose status was never set
   if(statusVals) q=(isC&&st.status==='active')?q.or('status.eq.فعال,status.is.null'):q.in('status',statusVals);
+  if(st.area) q=q.eq('area',st.area);
   if(term) q=q.or(LIST_SEARCH_COLS[kind].map(c=>`${c}.ilike.*${term}*`).join(','));
   const from=st.page*LIST_PAGE_SIZE;
   const {data,error,count}=await q.order(col,{ascending:asc,nullsFirst:false}).order('id',{ascending:false}).range(from,from+LIST_PAGE_SIZE-1);
@@ -241,12 +242,42 @@ function openSortMenu(kind,btn){
     b.onclick=()=>{m.remove(); listState[kind].sort=key; listState[kind].page=0; reloadList(kind);};
     m.appendChild(b);
   });
+  const ab=document.createElement('button'); ab.type='button'; ab.textContent='محله: '+(listState[kind].area||'همه')+' ›';
+  ab.onclick=()=>openAreaMenu(kind,btn); m.appendChild(ab);
   document.body.appendChild(m);
   const r=btn.getBoundingClientRect();
   m.style.top=(r.bottom+6)+'px';
   m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-230))+'px';
   const close=(e)=>{if(!m.contains(e.target)){m.remove();document.removeEventListener('click',close,true);}};
   setTimeout(()=>document.addEventListener('click',close,true),0);
+}
+async function loadAreaOptions(kind){
+  const profile=await getCrmProfile().catch(()=>null);
+  const tbl=kind==='clients'?'clients':'properties';
+  const {data,error}=await visibleToProfile(saleOnlyQuery(shahrdarAuth.from(tbl).select('area')),profile).not('area','is',null).limit(5000);
+  if(error){console.error('loadAreaOptions',kind,error);return null;}
+  return [...new Set((data||[]).map(r=>String(r.area||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fa'));
+}
+function openAreaMenu(kind,btn){
+  document.getElementById('sortMenu')?.remove();
+  const m=document.createElement('div'); m.id='sortMenu'; m.className='sort-menu';
+  const addBtn=(label,onclick,on)=>{const b=document.createElement('button'); b.type='button'; b.textContent=label; if(on) b.className='on'; b.onclick=onclick; m.appendChild(b); return b;};
+  const pick=(area)=>{m.remove(); listState[kind].area=area; listState[kind].page=0; reloadList(kind);};
+  addBtn('‹ بازگشت',()=>openSortMenu(kind,btn));
+  addBtn('همه محله‌ها',()=>pick(''),!listState[kind].area);
+  const note=document.createElement('div'); note.textContent='در حال بارگذاری محله‌ها…'; note.style.cssText='padding:8px;opacity:.7'; m.appendChild(note);
+  document.body.appendChild(m);
+  const r=btn.getBoundingClientRect();
+  m.style.top=(r.bottom+6)+'px';
+  m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-230))+'px';
+  const close=(e)=>{if(!m.contains(e.target)){m.remove();document.removeEventListener('click',close,true);}};
+  setTimeout(()=>document.addEventListener('click',close,true),0);
+  loadAreaOptions(kind).then(areas=>{
+    note.remove();
+    if(areas===null){addBtn('دریافت محله‌ها انجام نشد',()=>{},false).disabled=true;return;}
+    if(!areas.length){addBtn('محله‌ای ثبت نشده است',()=>{},false).disabled=true;return;}
+    areas.forEach(a=>addBtn(a,()=>pick(a),listState[kind].area===a));
+  });
 }
 function openRowMenu(hostId,row,btn){
   document.getElementById('sortMenu')?.remove();
