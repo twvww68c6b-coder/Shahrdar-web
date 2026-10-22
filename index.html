@@ -251,13 +251,8 @@ function openSortMenu(kind,btn){
   const close=(e)=>{if(!m.contains(e.target)){m.remove();document.removeEventListener('click',close,true);}};
   setTimeout(()=>document.addEventListener('click',close,true),0);
 }
-async function loadAreaOptions(kind){
-  const profile=await getCrmProfile().catch(()=>null);
-  const tbl=kind==='clients'?'clients':'properties';
-  const {data,error}=await visibleToProfile(saleOnlyQuery(shahrdarAuth.from(tbl).select('area')),profile).not('area','is',null).limit(5000);
-  if(error){console.error('loadAreaOptions',kind,error);return null;}
-  return [...new Set((data||[]).map(r=>String(r.area||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fa'));
-}
+// Neighborhoods used by the Telegram bot (AREAS). Same names as clients.area / properties.area saved by the bot.
+const LIST_AREAS=['خانی‌آباد نو جنوبی','خانی‌آباد نو شمالی','شهرک شریعتی','شهرک بستان شمالی','شهرک بستان جنوبی'];
 function openAreaMenu(kind,btn){
   document.getElementById('sortMenu')?.remove();
   const m=document.createElement('div'); m.id='sortMenu'; m.className='sort-menu';
@@ -265,19 +260,13 @@ function openAreaMenu(kind,btn){
   const pick=(area)=>{m.remove(); listState[kind].area=area; listState[kind].page=0; reloadList(kind);};
   addBtn('‹ بازگشت',()=>openSortMenu(kind,btn));
   addBtn('همه محله‌ها',()=>pick(''),!listState[kind].area);
-  const note=document.createElement('div'); note.textContent='در حال بارگذاری محله‌ها…'; note.style.cssText='padding:8px;opacity:.7'; m.appendChild(note);
+  LIST_AREAS.forEach(a=>addBtn(a,()=>pick(a),listState[kind].area===a));
   document.body.appendChild(m);
   const r=btn.getBoundingClientRect();
   m.style.top=(r.bottom+6)+'px';
   m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-230))+'px';
   const close=(e)=>{if(!m.contains(e.target)){m.remove();document.removeEventListener('click',close,true);}};
   setTimeout(()=>document.addEventListener('click',close,true),0);
-  loadAreaOptions(kind).then(areas=>{
-    note.remove();
-    if(areas===null){addBtn('دریافت محله‌ها انجام نشد',()=>{},false).disabled=true;return;}
-    if(!areas.length){addBtn('محله‌ای ثبت نشده است',()=>{},false).disabled=true;return;}
-    areas.forEach(a=>addBtn(a,()=>pick(a),listState[kind].area===a));
-  });
 }
 function openRowMenu(hostId,row,btn){
   document.getElementById('sortMenu')?.remove();

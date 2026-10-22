@@ -14,14 +14,14 @@ await page.addInitScript(() => {
   window.__calls = [];
   const DATA = {
     clients: [
-      { id: 1, name: 'مشتری یک', phone: '1', area: 'سعادت‌آباد', max_budget: 5, status: 'فعال', created_at: '2026-10-01' },
-      { id: 2, name: 'مشتری دو', phone: '2', area: 'نیاوران', max_budget: 6, status: 'فعال', created_at: '2026-10-02' },
-      { id: 3, name: 'مشتری سه', phone: '3', area: 'سعادت‌آباد', max_budget: 7, status: 'فعال', created_at: '2026-10-03' },
+      { id: 1, name: 'مشتری یک', phone: '1', area: 'شهرک شریعتی', max_budget: 5, status: 'فعال', created_at: '2026-10-01' },
+      { id: 2, name: 'مشتری دو', phone: '2', area: 'شهرک بستان شمالی', max_budget: 6, status: 'فعال', created_at: '2026-10-02' },
+      { id: 3, name: 'مشتری سه', phone: '3', area: 'شهرک شریعتی', max_budget: 7, status: 'فعال', created_at: '2026-10-03' },
       { id: 4, name: 'مشتری چهار', phone: '4', area: null, max_budget: 8, status: 'فعال', created_at: '2026-10-04' },
     ],
     properties: [
-      { id: 10, code: 'P1', area: 'ونک', sqm: 80, price: 1, status: 'فعال', created_at: '2026-10-01' },
-      { id: 11, code: 'P2', area: 'ولیعصر', sqm: 90, price: 2, status: 'فعال', created_at: '2026-10-02' },
+      { id: 10, code: 'P1', area: 'خانی‌آباد نو شمالی', sqm: 80, price: 1, status: 'فعال', created_at: '2026-10-01' },
+      { id: 11, code: 'P2', area: 'شهرک بستان جنوبی', sqm: 90, price: 2, status: 'فعال', created_at: '2026-10-02' },
     ],
   };
   const builder = (table) => {
@@ -68,20 +68,20 @@ check('sort menu has no alphabetical area sort', !menuItems.some(t => t.includes
 await page.click('#sortMenu button:has-text("محله:")');
 await page.waitForTimeout(300);
 const areaItems = await page.$$eval('#sortMenu button', bs => bs.map(b => b.textContent.trim()));
-const expectedAreas = ['سعادت‌آباد', 'نیاوران'];
-check('neighborhood list shows every area from the data', expectedAreas.every(a => areaItems.includes(a)), JSON.stringify(areaItems));
+const expectedAreas = ['خانی‌آباد نو جنوبی','خانی‌آباد نو شمالی','شهرک شریعتی','شهرک بستان شمالی','شهرک بستان جنوبی'];
+check('neighborhood list shows the five bot neighborhoods', expectedAreas.every(a => areaItems.includes(a)) && areaItems.length === 7, JSON.stringify(areaItems));
 check('neighborhood list has همه محله‌ها and back', areaItems.includes('همه محله‌ها') && areaItems.some(t => t.includes('بازگشت')));
-check('empty and null areas are not listed', !areaItems.includes('') && areaItems.filter(t => t === 'سعادت‌آباد').length === 1);
+check('no duplicate neighborhood entries', new Set(areaItems).size === areaItems.length);
 await page.screenshot({ path: path.join(shotDir, 'area-menu.png') });
 
 // 3) Choose one neighborhood: list filters to it and the menu closes.
-await page.click('#sortMenu button:text-is("سعادت‌آباد")');
+await page.click('#sortMenu button:text-is("شهرک شریعتی")');
 await page.waitForTimeout(400);
 const state1 = await page.evaluate(() => listState.clients.area);
-check('choosing a neighborhood sets the filter', state1 === 'سعادت‌آباد', `(area=${state1})`);
+check('choosing a neighborhood sets the filter', state1 === 'شهرک شریعتی', `(area=${state1})`);
 check('menu closes after choosing', (await page.$('#sortMenu')) === null);
 const lastCall = await page.evaluate(() => window.__calls.filter(c => c.table === 'clients').pop());
-check('query is filtered by area', lastCall && lastCall.eqs.some(([c, v]) => c === 'area' && v === 'سعادت‌آباد'), JSON.stringify(lastCall));
+check('query is filtered by area', lastCall && lastCall.eqs.some(([c, v]) => c === 'area' && v === 'شهرک شریعتی'), JSON.stringify(lastCall));
 const rowsFiltered = await page.$$eval('#clientsList tbody tr', rs => rs.map(r => r.textContent));
 check('only the chosen neighborhood rows are shown', rowsFiltered.length === 2 && rowsFiltered.every(t => t.includes('مشتری یک') || t.includes('مشتری سه')), `(rows=${rowsFiltered.length})`);
 
@@ -103,11 +103,11 @@ await page.evaluate(() => openSortMenu('properties', document.getElementById('pr
 await page.click('#sortMenu button:has-text("محله:")');
 await page.waitForTimeout(300);
 const propAreas = await page.$$eval('#sortMenu button', bs => bs.map(b => b.textContent.trim()));
-check('files neighborhood list works', ['ونک', 'ولیعصر'].every(a => propAreas.includes(a)), JSON.stringify(propAreas));
-await page.click('#sortMenu button:text-is("ونک")');
+check('files neighborhood list works', ['خانی‌آباد نو شمالی', 'شهرک بستان جنوبی'].every(a => propAreas.includes(a)), JSON.stringify(propAreas));
+await page.click('#sortMenu button:text-is("خانی‌آباد نو شمالی")');
 await page.waitForTimeout(400);
 const pState = await page.evaluate(() => listState.properties.area);
-check('files list filters by neighborhood', pState === 'ونک');
+check('files list filters by neighborhood', pState === 'خانی‌آباد نو شمالی');
 
 check('no page errors', errs.length === 0, errs.join(' | '));
 await browser.close();
