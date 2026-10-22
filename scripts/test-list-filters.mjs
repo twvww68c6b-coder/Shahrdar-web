@@ -26,3 +26,11 @@ console.log(fail ? 'LIST FILTER CHECKS FAILED' : 'ALL LIST FILTER CHECKS PASSED 
   console.log((ok2 ? 'PASS' : 'FAIL') + ' clients active view includes empty-status clients');
   if (!ok2) process.exit(1);
 }
+// Neighborhood (area) sort exists for both lists, in both directions.
+{
+  const src = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const ok3 = src.includes("clients:{created_desc:['created_at',false]") && /area_asc:\['area',true\],area_desc:\['area',false\]\}/.test(src)
+    && src.includes("area_asc:'محله از الف تا ی',area_desc:'محله از ی تا الف'");
+  console.log((ok3 ? 'PASS' : 'FAIL') + ' neighborhood sort (area asc/desc) for clients and files');
+  if (!ok3) process.exit(1);
+}
