@@ -1,0 +1,10 @@
+
+{
+  "appId": "ir.iranzamin.shahrdar",
+  "appName": "شهردار ایران‌زمین",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
