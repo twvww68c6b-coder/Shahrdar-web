@@ -817,16 +817,29 @@ function runMatching(){
   const host=resultHost(btn.closest('.panel'),'matchingResults');
   runPropertySearch({area:strVal('mhArea'),maxPrice:max,minSqm:minSqm},host);
 }
+// Tehran calendar helpers (Iran has no DST: UTC+03:30). Timestamps in the CRM are stored as naive UTC.
+const TEHRAN_DAY_MS=86400000;
+function tehranDayKey(date){ return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).format(date||new Date()); }
+function shiftDayKey(key,days){ return new Date(Date.parse(key+'T00:00:00Z')+days*TEHRAN_DAY_MS).toISOString().slice(0,10); }
+function tehranMidnightISO(key){ return new Date(Date.parse(key+'T00:00:00+03:30')).toISOString(); }
+async function countFollowups(fromISO,toISO){
+  let q=shahrdarAuth.from('activities').select('id',{count:'exact',head:true}).eq('activity_type','پیگیری').gte('created_at',fromISO);
+  if(toISO) q=q.lt('created_at',toISO);
+  const {count,error}=await q;
+  if(error){ console.error('followups',error); return null; }
+  return count??0;
+}
+
 async function loadHomeStats(){
   const profile=await getCrmProfile().catch(()=>null);
   if(!profile) return;
-  const startOfDay=new Date(); startOfDay.setHours(0,0,0,0);
+  const startOfDay=tehranMidnightISO(tehranDayKey());
   const num=async(q)=>{const {count,error}=await q;if(error){console.error('stat',error);return null;}return count??0;};
   const fmt=n=>n===null?'—':n.toLocaleString('fa-IR');
   const vals={
     clients:await num(visibleToProfile(saleOnlyQuery(shahrdarAuth.from('clients').select('id',{count:'exact',head:true})),profile)),
     files:await num(visibleToProfile(saleOnlyQuery(shahrdarAuth.from('properties').select('id',{count:'exact',head:true}).in('status',PROPERTY_ACTIVE_STATUSES)),profile)),
-    followups:await num(shahrdarAuth.from('activities').select('id',{count:'exact',head:true}).eq('activity_type','پیگیری').gte('created_at',startOfDay.toISOString())),
+    followups:await countFollowups(startOfDay),
     contracts:await num(shahrdarAuth.from('properties').select('id',{count:'exact',head:true}).in('status',['🔵 معامله شد - توسط ما','🟣 معامله شد - توسط دیگری'])),
     urgent:await num(visibleToProfile(saleOnlyQuery(shahrdarAuth.from('properties').select('id',{count:'exact',head:true}).eq('is_urgent',1).in('status',PROPERTY_ACTIVE_STATUSES)),profile)),
   };
@@ -1700,34 +1713,56 @@ restoreShahrdarSession();
   const __openPage = openPage;
   openPage = function(key){ __openPage(key); applyTitle(); };
 
-  // ----- Home growth (snapshot of the consultant's own numbers, once per Tehran day)
+  // ----- Home growth
+  // Stock cards (clients, files, urgent, contracts) are compared with the daily snapshot taken exactly 7 Tehran days earlier.
+  // The follow-up card is a flow for today, so it is compared with the same clock window 7 days earlier, computed from activities.
+  const WEEK_DAYS=7;
   const GROWTH = [
-    ['clients','statClients','clients_total'],['files','statProps','active_files'],['urgent','statUrgent','urgent_files'],
-    ['followups','statFollow','followups_today'],['contracts','statDeals','contracts']
+    ['clients','statClients','clients_total','stock'],['files','statProps','active_files','stock'],['urgent','statUrgent','urgent_files','stock'],
+    ['followups','statFollow',null,'flow'],['contracts','statDeals','contracts','stock']
   ];
-  const tehranDay = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const tehranDay = () => tehranDayKey();
   function deltaSlot(id){ const el=$(id); const card=el&&el.closest('.stat'); if(!card) return null; let d=card.querySelector('.stat-delta'); if(!d){ d=document.createElement('div'); d.className='stat-delta'; card.appendChild(d); } return d; }
+  const fmtNum = n => Math.abs(n).toLocaleString(LANG==='en'?'en-US':'fa-IR');
   window.updateHomeGrowth = async function(profile, vals){
-    const uid=profile.crmId, today=tehranDay();
+    const uid=profile.crmId, today=tehranDay(), lastWeek=shiftDayKey(today,-WEEK_DAYS);
     const row={user_id:uid,snap_date:today,clients_total:vals.clients,active_files:vals.files,urgent_files:vals.urgent,followups_today:vals.followups,contracts:vals.contracts};
     const put=await shahrdarAuth.from('home_stat_snapshots').upsert(row,{onConflict:'user_id,snap_date',ignoreDuplicates:true});
     if(put.error) console.error('snapshot',put.error);
-    const {data:rows,error}=await shahrdarAuth.from('home_stat_snapshots').select('*').eq('user_id',uid).lt('snap_date',today).order('snap_date',{ascending:false}).limit(1);
-    const prev = (!error && rows && rows[0]) || null;
-    GROWTH.forEach(([key,id,col])=>{
+    const [exact,first]=await Promise.all([
+      shahrdarAuth.from('home_stat_snapshots').select('*').eq('user_id',uid).eq('snap_date',lastWeek).limit(1),
+      shahrdarAuth.from('home_stat_snapshots').select('snap_date').eq('user_id',uid).order('snap_date',{ascending:true}).limit(1)
+    ]);
+    const weekAgo = (!exact.error && exact.data && exact.data[0]) || null;
+    const earliest = (!first.error && first.data && first.data[0] && first.data[0].snap_date) || today;
+    const daysSinceFirst = Math.round((Date.parse(today)-Date.parse(earliest))/TEHRAN_DAY_MS);
+    const daysLeft = Math.max(1, WEEK_DAYS - daysSinceFirst);
+    const nowMs=Date.now();
+    const flowBefore = await countFollowups(tehranMidnightISO(shiftDayKey(today,-WEEK_DAYS)), new Date(nowMs-WEEK_DAYS*TEHRAN_DAY_MS).toISOString());
+    GROWTH.forEach(([key,id,col,kind])=>{
       const slot=deltaSlot(id); if(!slot) return;
       const now=vals[key];
-      if(now===null || !prev){ slot.textContent = LANG==='en' ? '● No comparison yet' : '● داده کافی برای مقایسه نیست'; slot.className='stat-delta'; return; }
-      const before=Number(prev[col]), diff=now-before;
-      if(diff===0){ slot.textContent = LANG==='en' ? '● No change' : '● بدون تغییر'; slot.className='stat-delta'; return; }
-      const pct = before>0 ? ' ('+Math.abs(Math.round(diff/before*100)).toLocaleString(LANG==='en'?'en-US':'fa-IR')+'%)' : '';
-      slot.textContent = (diff>0?'▲ ':'▼ ') + Math.abs(diff).toLocaleString(LANG==='en'?'en-US':'fa-IR') + pct;
+      const before = kind==='flow' ? flowBefore : (weekAgo ? Number(weekAgo[col]) : null);
+      const compareLabel = kind==='flow' ? (LANG==='en' ? 'vs same time 7 days ago' : 'نسبت به همین ساعت ۷ روز قبل') : (LANG==='en' ? 'vs 7 days ago' : 'نسبت به ۷ روز قبل');
+      slot.className='stat-delta';
+      if(now===null || now===undefined || before===null || before===undefined){
+        slot.textContent = kind==='flow'
+          ? (LANG==='en' ? '● No comparison yet' : '● داده کافی برای مقایسه نیست')
+          : (LANG==='en' ? `● 7-day comparison starts in ${daysLeft} day(s)` : `● مقایسه ۷ روزه ${daysLeft.toLocaleString('fa-IR')} روز دیگر فعال می‌شود`);
+        return;
+      }
+      const diff=now-before;
+      if(diff===0){ slot.textContent = (LANG==='en' ? '● No change ' : '● بدون تغییر ') + compareLabel; return; }
+      const pct = before>0 ? ' ('+Math.round(Math.abs(diff)/before*100).toLocaleString(LANG==='en'?'en-US':'fa-IR')+'%)' : '';
+      slot.textContent = (diff>0?'▲ ':'▼ ') + fmtNum(diff) + pct + ' · ' + compareLabel;
       slot.className = 'stat-delta ' + (diff>0 ? 'up' : 'down');
     });
   };
 
   // ----- Notifications (bell)
   let notifItems=[], notifSeen=new Set(), notifChannel=null, notifOpen=false;
+  const NOTIF_TITLES = { urgent_client: 'مشتری فوری شد', urgent_file: 'فایل فوری شد' };
+  const notifTitle = n => NOTIF_TITLES[n.kind] || n.title || '';
   const fmtTime = v => { try { return new Date(v).toLocaleString(LANG==='en'?'en-US':'fa-IR',{dateStyle:'short',timeStyle:'short'}); } catch(e){ return ''; } };
   function renderNotifications(){
     const unread = notifItems.filter(n=>!n.read_at).length;
@@ -1738,7 +1773,7 @@ restoreShahrdarSession();
     if(!notifItems.length){ const e=document.createElement('div'); e.className='empty'; e.textContent = LANG==='en' ? EN.empty : 'اعلانی وجود ندارد'; list.appendChild(e); return; }
     notifItems.forEach(n=>{
       const b=document.createElement('button'); b.type='button'; b.className='notif-item'+(n.read_at?'':' unread');
-      const t=document.createElement('strong'); t.textContent=n.title||''; b.appendChild(t);
+      const t=document.createElement('strong'); t.textContent=notifTitle(n); b.appendChild(t);
       if(n.body){ const d=document.createElement('small'); d.textContent=n.body; b.appendChild(d); }
       const tm=document.createElement('small'); tm.textContent=fmtTime(n.created_at); b.appendChild(tm);
       b.addEventListener('click', ()=>openNotification(n));
@@ -1764,7 +1799,14 @@ restoreShahrdarSession();
   async function openNotification(n){
     await markRead(n.id);
     setNotifOpen(false);
-    if(n.entity_kind==='property') openPage('properties'); else if(n.entity_kind==='client') openPage('clients');
+    const isProp = n.entity_kind==='property';
+    if(!isProp && n.entity_kind!=='client') return;
+    const table = isProp ? 'properties' : 'clients';
+    const profile = currentCrm || await getCrmProfile().catch(()=>null);
+    const {data,error} = await visibleToProfile(saleOnlyQuery(shahrdarAuth.from(table).select('id').eq('id',n.entity_id).limit(1)),profile);
+    if(error || !data || !data.length){ toast('این مورد دیگر در دسترس شما نیست.'); return; }
+    openPage(isProp ? 'properties' : 'clients');
+    openRecordModal(isProp ? 'propertiesList' : 'clientsList', {id:n.entity_id});
   }
   async function markAllRead(){
     const profile = currentCrm; if(!profile) return;
@@ -1785,7 +1827,7 @@ restoreShahrdarSession();
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'panel_notifications',filter:'recipient_user_id=eq.'+profile.crmId},payload=>{
           const r=payload.new; if(!r||notifSeen.has(r.id)) return; notifSeen.add(r.id);
           notifItems.unshift(r); renderNotifications();
-          toast((r.title||'')+(r.body?' — '+r.body:''));
+          toast(notifTitle(r)+(r.body?' — '+r.body:''));
         }).subscribe();
     } catch(e){ console.error('realtime',e); }
   }

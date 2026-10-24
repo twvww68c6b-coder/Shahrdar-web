@@ -138,18 +138,15 @@ for (const vp of [
   await ctx.close();
 }
 
-// 4) Growth arrows from the stored snapshot (page built from real data)
+// 4) Growth: stock cards need the snapshot exactly 7 days earlier (only yesterday exists here) -> wait message; follow-ups compare the same clock window
 {
   const { ctx, page, errs } = await open({ size: { width: 1440, height: 900 } });
   await page.evaluate(() => refreshHome());
   await page.waitForTimeout(400);
   const deltas = await page.$$eval('#page-home .stat', cards => cards.map(c => (c.querySelector('.stat-delta') || {}).textContent || ''));
   console.log('   deltas:', JSON.stringify(deltas));
-  check('clients growth ▲ 2 (5%)', deltas[0].includes('▲') && deltas[0].includes('۲'), deltas[0]);
-  check('files growth ▼ 1 (29 vs 30 snapshot; 3 sold excluded)', deltas[1].includes('▼') && deltas[1].includes('۱'), deltas[1]);
-  check('urgent unchanged shows neutral', deltas[2].includes('بدون تغییر'), deltas[2]);
-  check('followups ▲ 3 (150%)', deltas[3].includes('▲') && deltas[3].includes('۱۵۰'), deltas[3]);
-  check('contracts ▲ 2 (200%)', deltas[4].includes('▲') && deltas[4].includes('۲۰۰'), deltas[4]);
+  [0, 1, 2, 4].forEach(i => check('stock card ' + i + ' waits for 7-day snapshot (6 days left)', deltas[i].includes('فعال می‌شود') && deltas[i].includes('۶'), deltas[i]));
+  check('followups compares with activities (no past follow-ups here: ▲ ۵)', deltas[3].includes('▲') && deltas[3].includes('۵'), deltas[3]);
   const snap = await page.evaluate(() => window.__writes.filter(w => w.table === 'home_stat_snapshots'));
   check('today snapshot written once with upsert ignore-duplicates', snap.length === 1 && snap[0].mode === 'upsert' && snap[0].opts && snap[0].opts.ignoreDuplicates === true, JSON.stringify(snap).slice(0, 160));
   check('no page errors in growth', errs.length === 0, errs.join(' | '));
@@ -163,7 +160,7 @@ for (const vp of [
   await page.evaluate(() => refreshHome());
   await page.waitForTimeout(400);
   const d = await page.$eval('#page-home .stat .stat-delta', el => el.textContent);
-  check('no previous snapshot shows no comparison', d.includes('داده کافی'), d);
+  check('no previous snapshot shows 7-day wait (no numbers invented)', d.includes('فعال می‌شود') && d.includes('۷'), d);
   await ctx.close();
 }
 
