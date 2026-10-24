@@ -204,6 +204,24 @@ for (const vp of [
   await ctx.close();
 }
 
+// 8) Phone header fits and English labels reach the toolbar (portrait and landscape)
+for (const vp of [{ name: 'portrait 390', size: { width: 390, height: 844 } }, { name: 'landscape 844x390', size: { width: 844, height: 390 } }]) {
+  const { ctx, page } = await open({ size: vp.size, mobile: true });
+  const r = await page.evaluate(() => { const b = document.getElementById('logoutButton').getBoundingClientRect(); return { left: b.left, sw: document.documentElement.scrollWidth, vw: innerWidth }; });
+  check(vp.name + ': header buttons inside the screen, no horizontal scroll', r.left >= 0 && r.sw <= r.vw + 1, JSON.stringify(r));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await open({ size: { width: 390, height: 844 }, mobile: true });
+  await page.evaluate(() => { document.querySelector('[data-lang="en"]').click(); openPage('clients'); });
+  const t = await page.evaluate(() => ({ ph: document.getElementById('clientSearch').placeholder, add: [...document.querySelectorAll('#page-clients button')].some(b => b.textContent.includes('Add client')), sort: [...document.querySelectorAll('#page-clients button')].some(b => b.textContent.includes('Sort')) }));
+  check('English toolbar on clients page', t.ph.startsWith('Search') && t.add && t.sort, JSON.stringify(t));
+  await page.evaluate(() => document.querySelector('[data-lang="fa"]').click());
+  const back = await page.evaluate(() => document.getElementById('clientSearch').placeholder);
+  check('Persian placeholder restored', back.startsWith('جست‌وجوی'), back);
+  await ctx.close();
+}
+
 await browser.close();
 console.log(fails.length ? `ANDROID UI CHECKS FAILED (${fails.length}): ${fails.join('; ')}` : 'ALL ANDROID UI CHECKS PASSED (headless browser, fake data)');
 process.exit(fails.length ? 1 : 0);
