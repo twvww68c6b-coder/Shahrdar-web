@@ -1785,6 +1785,50 @@ restoreShahrdarSession();
     if(error) console.error('share notification',error);
   };
 
+  // ----- Text in the work area: exact Persian labels → English (text nodes only; original kept for switching back).
+  const TXT_EN = {
+    'ثبت سریع':'Quick entry','＋ ثبت سریع':'+ Quick entry','◎ پیشنهاد به مشتری':'◎ Client matches',
+    'ذخیره در دیتابیس CRM':'Saved to the CRM database','نوع ثبت':'Record type','مشتری':'Client','فایل ملکی':'Property file',
+    'نام مشتری':'Client name','شماره تماس':'Phone','محله':'Neighborhood','انتخاب محله':'Choose neighborhood','همه مناطق':'All areas',
+    'نوع معامله':'Deal type','فروش':'Sale','اجاره':'Rent','نوع ملک':'Property type','آپارتمان':'Apartment','ویلا':'Villa','سایر':'Other',
+    'فایل‌های فوری فروشی':'Urgent sale files','مشتریان فوری فروشی':'Urgent sale clients','فایل‌های قدیمی':'Old files',
+    'قدیمی‌ترین فایل‌های فعال فروشی':'Oldest active sale files','اعلان فوری — همان لیست ربات':'Urgent alert — same list as the bot',
+    'از دیتابیس':'From database','در حال بارگذاری…':'Loading…','در حال بارگذاری مشتریان…':'Loading clients…','در حال بارگذاری فایل‌ها…':'Loading files…',
+    'فعال‌ها':'Active','خرید کرده':'Bought','منصرف شده':'Cancelled','همه':'All','معامله شد':'Sold',
+    'ثبت مشتری':'Add client','＋ ثبت مشتری':'+ Add client','ثبت فایل':'Add file','＋ ثبت فایل':'+ Add file',
+    'تازه‌سازی':'Refresh','↻ تازه‌سازی':'↻ Refresh','مرتب‌سازی':'Sort','⇅ مرتب‌سازی':'⇅ Sort',
+    'ذخیره':'Save','لغو':'Cancel','حذف':'Delete','بستن':'Close','بازگشت':'Back','پایان':'Done',
+    'وضعیت':'Status','وضعیت مشتری':'Client status','وضعیت ملک':'Property status','یادداشت':'Note','یادداشت‌ها':'Notes',
+    'پیگیری‌ها':'Follow-ups','پیگیری':'Follow-up','عکس‌ها':'Photos','ویدئوها':'Videos','بازدیدها':'Visits',
+    'تنظیمات':'Settings','عملکرد من':'My performance','شهروند':'Citizen','داشبورد مدیریتی':'Manager dashboard',
+    'خروج':'Log out','عکس پروفایل':'Profile photo','نمای کلی':'Overview'
+  };
+  const TXT_ORIG = new WeakMap();
+  let translating = false;
+  function translateNode(root){
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = []; let n;
+    while((n = walker.nextNode())) nodes.push(n);
+    nodes.forEach(t => {
+      const el = t.parentElement;
+      if(!el || el.closest('[data-en],[data-en-ph],script,style')) return;
+      const key = t.nodeValue.trim();
+      if(LANG === 'en'){
+        if(TXT_EN[key]){ if(!TXT_ORIG.has(t)) TXT_ORIG.set(t, t.nodeValue); t.nodeValue = t.nodeValue.replace(key, TXT_EN[key]); }
+      } else if(TXT_ORIG.has(t)){ t.nodeValue = TXT_ORIG.get(t); TXT_ORIG.delete(t); }
+    });
+  }
+  function translateWorkArea(){
+    if(translating) return; translating = true;
+    try { translateNode(document.querySelector('main.main') || document.body); } finally { translating = false; }
+  }
+  try {
+    new MutationObserver(() => { if(LANG === 'en' && !translating) requestAnimationFrame(translateWorkArea); })
+      .observe(document.querySelector('main.main') || document.body, { childList: true, subtree: true, characterData: true });
+  } catch(e) {}
+  const __applyLang = applyLang;
+  applyLang = function(l){ __applyLang(l); translateWorkArea(); };
+
   // ----- Start
   applyTheme(THEME);
   applyLang(LANG);

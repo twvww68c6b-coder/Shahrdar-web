@@ -222,6 +222,24 @@ for (const vp of [{ name: 'portrait 390', size: { width: 390, height: 844 } }, {
   await ctx.close();
 }
 
+// 9) Work-area labels follow the language and come back exactly in Persian
+{
+  const { ctx, page, errs } = await open({ size: { width: 390, height: 844 }, mobile: true });
+  await page.evaluate(() => openPage('quick'));
+  const before = await page.evaluate(() => [...document.querySelectorAll('#page-quick .panel *')].filter(e => e.childNodes.length === 1 && e.firstChild.nodeType === 3).map(e => e.textContent.trim()).filter(t => t === 'نوع ثبت' || t === 'محله' || t === 'نوع معامله').length);
+  await page.evaluate(() => document.querySelector('[data-lang="en"]').click());
+  await page.evaluate(() => openPage('quick'));
+  await page.waitForTimeout(100);
+  const en = await page.evaluate(() => document.getElementById('page-quick').innerText);
+  check('quick page shows English labels', /Record type/.test(en) && /Neighborhood/.test(en) && /Deal type/.test(en), `(persian-before=${before})`);
+  await page.evaluate(() => document.querySelector('[data-lang="fa"]').click());
+  await page.waitForTimeout(100);
+  const fa = await page.evaluate(() => document.getElementById('page-quick').innerText);
+  check('quick page returns to Persian exactly', fa.includes('نوع ثبت') && fa.includes('محله') && !/Record type/.test(fa));
+  check('no page errors in translation switch', errs.length === 0, errs.join(' | '));
+  await ctx.close();
+}
+
 await browser.close();
 console.log(fails.length ? `ANDROID UI CHECKS FAILED (${fails.length}): ${fails.join('; ')}` : 'ALL ANDROID UI CHECKS PASSED (headless browser, fake data)');
 process.exit(fails.length ? 1 : 0);
