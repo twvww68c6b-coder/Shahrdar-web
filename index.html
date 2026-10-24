@@ -1775,9 +1775,10 @@ restoreShahrdarSession();
     const bell=$('notifBell'); if(bell) bell.setAttribute('aria-label', (LANG==='en'?'Notifications':'اعلان‌ها')+(unread?' ('+unread+')':''));
     const list=$('notifList'); if(!list) return;
     list.innerHTML='';
-    if(!notifItems.length){ const e=document.createElement('div'); e.className='empty'; e.textContent = LANG==='en' ? EN.empty : 'اعلانی وجود ندارد'; list.appendChild(e); return; }
-    notifItems.forEach(n=>{
-      const b=document.createElement('button'); b.type='button'; b.className='notif-item'+(n.read_at?'':' unread');
+    const visible = notifItems.filter(n=>!n.read_at);   // read notifications leave the panel
+    if(!visible.length){ const e=document.createElement('div'); e.className='empty'; e.textContent = LANG==='en' ? EN.empty : 'اعلانی وجود ندارد'; list.appendChild(e); return; }
+    visible.forEach(n=>{
+      const b=document.createElement('button'); b.type='button'; b.className='notif-item unread';
       const t=document.createElement('strong'); t.textContent=notifTitle(n); b.appendChild(t);
       if(n.body){ const d=document.createElement('small'); d.textContent=n.body; b.appendChild(d); }
       const tm=document.createElement('small'); tm.textContent=fmtTime(n.created_at); b.appendChild(tm);
@@ -1790,7 +1791,7 @@ restoreShahrdarSession();
     if(!profile) return;
     const {data,error}=await shahrdarAuth.from('panel_notifications')
       .select('id,kind,title,body,entity_kind,entity_id,created_at,read_at')
-      .eq('recipient_user_id',profile.crmId).order('created_at',{ascending:false}).limit(30);
+      .eq('recipient_user_id',profile.crmId).is('read_at',null).order('created_at',{ascending:false}).limit(30);
     if(error){ console.error('notifications',error); notifItems=[]; renderNotifications(); return; }
     notifItems=data||[]; notifItems.forEach(n=>notifSeen.add(n.id)); renderNotifications();
   }
