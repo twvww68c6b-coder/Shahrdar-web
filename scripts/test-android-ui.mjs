@@ -173,7 +173,7 @@ for (const vp of [
   check('bell badge shows unread count', badge.trim() === '۲', `(badge=${badge})`);
   await page.click('#notifBell');
   const count = await page.$$eval('#notifList .notif-item', els => els.length);
-  check('notification list shows all items', count === 3, `(items=${count})`);
+  check('notification list shows only unread items (2 of 3)', count === 2, `(items=${count})`);
   await page.screenshot({ path: path.join(SHOTS, 'android-notifications.png') });
   await page.click('#notifReadAll');
   await page.waitForTimeout(150);
