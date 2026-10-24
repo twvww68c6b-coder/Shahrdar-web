@@ -113,7 +113,11 @@ body.home-active .topbar .eyebrow{display:none}
   .topbar > div:first-child{min-width:0;flex:1 1 auto;overflow:hidden}
   .top-actions{gap:8px;flex:0 0 auto;flex-wrap:nowrap}
   .top-actions label.ghost > span:last-child{display:none}
-  .top-actions label.ghost{padding:8px}
+  .top-actions label.ghost{padding:0;width:40px;height:40px;min-width:40px;min-height:40px;justify-content:center;border-radius:12px}
+  .top-actions label.ghost.has-photo{min-width:40px;min-height:40px;background-size:cover}
+  .top-actions .top-avatar{width:30px;height:30px;border:0}
+  .top-actions .notif-bell{min-width:40px;height:40px}
+  .top-actions #logoutButton{height:40px;min-height:40px;padding:0 12px}
 }
 </style></head>
 <body class="auth-required">
