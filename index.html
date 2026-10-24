@@ -75,6 +75,7 @@ body.auth-required .tg-login-screen{display:flex}
 .top-actions .notif-bell{display:inline-flex!important;position:relative;min-width:40px;align-items:center;justify-content:center}
 .notif-badge{position:absolute;top:-5px;left:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--red);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;padding:0 4px}
 .notif-badge[hidden],.notif-panel[hidden],.more-sheet[hidden]{display:none!important}
+body.home-active .topbar .eyebrow{display:none}
 .notif-panel{position:absolute;top:calc(100% + 8px);left:0;width:min(340px,86vw);max-height:60vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;z-index:70;box-shadow:0 12px 30px #0008}
 @media(max-width:700px),(pointer:coarse) and (max-height:600px){.notif-panel{position:fixed;top:calc(env(safe-area-inset-top) + 74px);left:12px;right:12px;width:auto;max-height:65vh}}
 .notif-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
@@ -1638,7 +1639,9 @@ restoreShahrdarSession();
   const activeKey = () => { const p=document.querySelector('.page.active'); return p ? p.id.replace('page-','') : 'home'; };
 
   // ----- Language and theme
-  function applyTitle(){ const el=$('pageTitle'); if(!el) return; const k=activeKey(); el.textContent = LANG==='en' ? (EN.titles[k]||el.textContent) : (FA_TITLES[k]||el.textContent); }
+  function applyTitle(){ const el=$('pageTitle'); if(!el) return; const k=activeKey(); document.body.classList.toggle('home-active', k==='home');
+    if(k==='home' && LANG!=='en'){ el.textContent = (typeof currentCrm!=='undefined' && currentCrm?.name) || FA_TITLES.home || el.textContent; return; }
+    el.textContent = LANG==='en' ? (EN.titles[k]||el.textContent) : (FA_TITLES[k]||el.textContent); }
   function applyLang(l){
     LANG = l==='en' ? 'en' : 'fa';
     writePref(LANG_KEY, LANG);
