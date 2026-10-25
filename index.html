@@ -1377,7 +1377,9 @@ async function openRecordModal(hostId,row){
   head.append(h,close);
   const grid=document.createElement('div');grid.className='form-grid';
   const keys=labels?Object.keys(labels).filter(k=>k in data):Object.keys(data).filter(k=>k!=='id');
-  keys.forEach(k=>{const f=document.createElement('div');f.className='form-field';const l=document.createElement('label');l.textContent=(labels&&labels[k])||k;const v=document.createElement('div');if(k==='phone'&&data[k]&&telHref(data[k])){v.appendChild(makeCallLink(data[k]));}else{v.textContent=fmtDetail(k,data[k]);}v.style.fontSize='13px';f.append(l,v);grid.appendChild(f);});
+  keys.forEach(k=>{const f=document.createElement('div');f.className='form-field';const l=document.createElement('label');l.textContent=(labels&&labels[k])||k;const v=document.createElement('div');if(k==='phone'&&data[k]&&telHref(data[k])){v.appendChild(makeCallLink(data[k]));}else{v.textContent=fmtDetail(k,data[k]);}v.style.fontSize='13px';f.append(l,v);grid.appendChild(f);
+    if(table==='properties' && k==='price' && Number(data.price)>0 && Number(data.sqm)>0){const pf=document.createElement('div');pf.className='form-field';const pl=document.createElement('label');pl.textContent='قیمت هر متر';const pv=document.createElement('div');pv.style.fontSize='13px';pv.textContent=fmtDetail('price',Math.round(Number(data.price)/Number(data.sqm)));pf.append(pl,pv);grid.appendChild(pf);}
+  });
   box.append(head,grid);
 
   if(table){

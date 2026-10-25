@@ -16,7 +16,7 @@ const initFake = (yesterday) => {
     web_user_access: [{ auth_user_id: 'u1', crm_user_id: 1, enabled: true }],
     users: [{ id: 1, telegram_id: 1001, name: 'مشاور الف', role: 'مشاور' }, { id: 2, telegram_id: 1002, name: 'مشاور ب', role: 'مشاور' }],
     clients: Array.from({ length: 40 }, (_, i) => ({ id: i + 1, status: 'فعال', owner_user_id: 1, is_urgent: 0 })),
-    properties: Array.from({ length: 32 }, (_, i) => ({ id: i + 1, status: i < 3 ? '🔵 معامله شد - توسط ما' : '🟢 فعال', owner_user_id: 1, is_urgent: i < 10 ? 1 : 0, code: 'P' + (i + 1), area: 'شهرک شریعتی' })),
+    properties: Array.from({ length: 32 }, (_, i) => ({ id: i + 1, status: i < 3 ? '🔵 معامله شد - توسط ما' : '🟢 فعال', owner_user_id: 1, is_urgent: i < 10 ? 1 : 0, code: 'P' + (i + 1), area: 'شهرک شریعتی', price: 12000000000, sqm: 120 })),
     activities: Array.from({ length: 5 }, (_, i) => ({ id: i + 1, activity_type: 'پیگیری', created_at: new Date().toISOString() })),
     home_stat_snapshots: [{ user_id: 1, snap_date: yesterday, clients_total: 38, active_files: 30, urgent_files: 7, followups_today: 2, contracts: 1 }],
     panel_notifications: [
@@ -234,6 +234,20 @@ for (const vp of [{ name: 'portrait 390', size: { width: 390, height: 844 } }, {
   const fa = await page.evaluate(() => document.getElementById('page-quick').innerText);
   check('quick page returns to Persian exactly', fa.includes('نوع ثبت') && fa.includes('محله') && !/Record type/.test(fa));
   check('no page errors in translation switch', errs.length === 0, errs.join(' | '));
+  await ctx.close();
+}
+
+// 7) File details: price per square metre = total price / area (shown right under the price)
+{
+  const { ctx, page, errs } = await open({ size: { width: 1280, height: 900 } });
+  await page.evaluate(() => openRecordModal('propertiesList', { id: 1 }));
+  await page.waitForTimeout(300);
+  const labels = await page.$$eval('.modal .form-field label', els => els.map(e => e.textContent));
+  const vals = await page.$$eval('.modal .form-field', els => els.map(e => e.innerText.replace(/\n/g, ' | ')));
+  const i = labels.indexOf('قیمت فروش');
+  check('file details: price-per-metre row directly under price', i >= 0 && labels[i + 1] === 'قیمت هر متر', JSON.stringify(labels.slice(i, i + 2)));
+  check('file details: price per metre = 12,000,000,000 / 120 = 100,000,000', i >= 0 && vals[i + 1] && vals[i + 1].includes('۱۰۰٬۰۰۰٬۰۰۰'), JSON.stringify(vals.slice(i + 1, i + 2)));
+  check('file details: no page errors', errs.length === 0, errs.join(' | '));
   await ctx.close();
 }
 
