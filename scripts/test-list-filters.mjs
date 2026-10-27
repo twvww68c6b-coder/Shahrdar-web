@@ -31,7 +31,7 @@ console.log(fail ? 'LIST FILTER CHECKS FAILED' : 'ALL LIST FILTER CHECKS PASSED 
 {
   const src = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const noAreaSort = !/area_(asc|desc)/.test(src);
-  const hasFilter = src.includes("if(st.area) q=q.eq('area',st.area);") && src.includes('function openAreaMenu(kind,btn)') && src.includes("const LIST_AREAS=['خانی‌آباد نو جنوبی'");
+  const hasFilter = src.includes("if(st.area) q=q.in('area',areaDbValues(st.area));") && src.includes('function openAreaMenu(kind,btn)') && src.includes("const LIST_AREAS=['خانی‌آباد نو جنوبی'");
   const ok4 = noAreaSort && hasFilter && /area:''\}/.test(src);
   console.log((ok4 ? 'PASS' : 'FAIL') + ' neighborhood filter from a list (no alphabetical area sort)');
   if (!ok4) process.exit(1);

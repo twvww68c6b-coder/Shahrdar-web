@@ -25,14 +25,15 @@ await page.addInitScript(() => {
     ],
   };
   const builder = (table) => {
-    const st = { eqs: [] };
+    const st = { eqs: [], ins: [] };
     const b = {
-      select() { return b; }, or() { return b; }, in() { return b; }, not() { return b; },
+      select() { return b; }, or() { return b; }, not() { return b; },
       order() { return b; }, range() { return b; }, limit() { return b; },
       eq(c, v) { st.eqs.push([c, v]); return b; },
+      in(c, v) { st.ins.push([c, v]); return b; },
       then(res, rej) {
-        const rows = (DATA[table] || []).filter(r => st.eqs.every(([c, v]) => r[c] === v));
-        window.__calls.push({ table, eqs: st.eqs });
+        const rows = (DATA[table] || []).filter(r => st.eqs.every(([c, v]) => r[c] === v) && st.ins.every(([c, v]) => v.includes(r[c])));
+        window.__calls.push({ table, eqs: st.eqs, ins: st.ins });
         return Promise.resolve({ data: rows, error: null, count: rows.length }).then(res, rej);
       },
     };
@@ -81,7 +82,7 @@ const state1 = await page.evaluate(() => listState.clients.area);
 check('choosing a neighborhood sets the filter', state1 === 'شهرک شریعتی', `(area=${state1})`);
 check('menu closes after choosing', (await page.$('#sortMenu')) === null);
 const lastCall = await page.evaluate(() => window.__calls.filter(c => c.table === 'clients').pop());
-check('query is filtered by area', lastCall && lastCall.eqs.some(([c, v]) => c === 'area' && v === 'شهرک شریعتی'), JSON.stringify(lastCall));
+check('query is filtered by area (canonical + legacy spellings)', lastCall && lastCall.ins.some(([c, v]) => c === 'area' && v.includes('شهرک شریعتی') && v.includes('شریعتی')), JSON.stringify(lastCall));
 const rowsFiltered = await page.$$eval('#clientsList tbody tr', rs => rs.map(r => r.textContent));
 check('only the chosen neighborhood rows are shown', rowsFiltered.length === 2 && rowsFiltered.every(t => t.includes('مشتری یک') || t.includes('مشتری سه')), `(rows=${rowsFiltered.length})`);
 
