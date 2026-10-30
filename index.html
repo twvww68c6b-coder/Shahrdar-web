@@ -143,14 +143,14 @@ body.home-active .topbar .eyebrow{display:none}
 :root:not([data-theme="light"]) .quick,
 :root:not([data-theme="light"]) .hero,
 :root:not([data-theme="light"]) .slide-card,
-:root:not([data-theme="light"]) .citizen-note{background:linear-gradient(145deg,rgba(24,34,54,.66),rgba(12,18,30,.58));-webkit-backdrop-filter:blur(14px) saturate(125%);backdrop-filter:blur(14px) saturate(125%);border-color:var(--glass-edge);box-shadow:var(--glass-shadow),inset 0 1px 0 var(--glass-shine);transition:border-color .25s ease,box-shadow .25s ease,transform .25s ease}
+:root:not([data-theme="light"]) .citizen-note{background:linear-gradient(145deg,rgba(24,34,54,.78),rgba(12,18,30,.7));border-color:var(--glass-edge);box-shadow:var(--glass-shadow),inset 0 1px 0 var(--glass-shine);transition:border-color .25s ease,box-shadow .25s ease,transform .25s ease}
 :root:not([data-theme="light"]) .stat-link:hover,:root:not([data-theme="light"]) .stat-link:focus-visible,:root:not([data-theme="light"]) .quick:hover{border-color:rgba(216,181,107,.5);box-shadow:var(--glass-shadow),0 0 26px rgba(216,181,107,.12),inset 0 1px 0 var(--glass-shine)}
-:root:not([data-theme="light"]) .table-wrap{background:rgba(12,18,30,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+:root:not([data-theme="light"]) .table-wrap{background:rgba(12,18,30,.82)}
 :root:not([data-theme="light"]) .modal,:root:not([data-theme="light"]) .more-card,:root:not([data-theme="light"]) .notif-panel,:root:not([data-theme="light"]) .sort-menu{background:rgba(14,21,35,.82);-webkit-backdrop-filter:blur(20px) saturate(135%);backdrop-filter:blur(20px) saturate(135%);border-color:var(--glass-edge);box-shadow:0 24px 70px rgba(2,4,10,.6),inset 0 1px 0 var(--glass-shine)}
 :root:not([data-theme="light"]) .mobile-nav{background:rgba(9,13,24,.7);-webkit-backdrop-filter:blur(18px) saturate(130%);backdrop-filter:blur(18px) saturate(130%);border-top-color:var(--glass-edge)}
 :root:not([data-theme="light"]) .primary{background:linear-gradient(135deg,#f2dda6 0%,#d8b56b 50%,#a8843f 100%);box-shadow:0 8px 22px rgba(216,181,107,.18),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .18s ease,filter .18s ease,box-shadow .2s ease}
 :root:not([data-theme="light"]) .primary:hover{box-shadow:0 12px 30px rgba(216,181,107,.3),inset 0 1px 0 rgba(255,255,255,.4)}
-:root:not([data-theme="light"]) .ghost,:root:not([data-theme="light"]) .icon-btn{background:rgba(255,255,255,.035);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:transform .18s ease,border-color .18s ease,background-color .18s ease}
+:root:not([data-theme="light"]) .ghost,:root:not([data-theme="light"]) .icon-btn{background:rgba(255,255,255,.035);transition:transform .18s ease,border-color .18s ease,background-color .18s ease}
 :root:not([data-theme="light"]) .ghost:hover,:root:not([data-theme="light"]) .icon-btn:hover{background:rgba(216,181,107,.08)}
 :root:not([data-theme="light"]) .field,:root:not([data-theme="light"]) .search,:root:not([data-theme="light"]) .list-status-filter{background:rgba(8,12,22,.7);transition:border-color .2s ease,box-shadow .2s ease}
 :root:not([data-theme="light"]) .field:focus,:root:not([data-theme="light"]) .search:focus{box-shadow:0 0 0 3px rgba(216,181,107,.16)}
@@ -178,7 +178,6 @@ body.home-active .topbar .eyebrow{display:none}
 .toast.show{animation:shSheetUp .22s ease backwards}
 
 @media(max-width:700px){
-  :root:not([data-theme="light"]) .panel,:root:not([data-theme="light"]) .stat,:root:not([data-theme="light"]) .quick,:root:not([data-theme="light"]) .hero{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
   :root:not([data-theme="light"]) .mobile-nav,:root:not([data-theme="light"]) .sidebar{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 }
 @media(prefers-reduced-motion:reduce){.page.active .hero,.page.active .stat,.page.active .panel,.page.active .quick,.page.active .slide-card,.modal-backdrop.open,.modal-backdrop.open .modal,.more-sheet:not([hidden]),.more-sheet:not([hidden]) .more-card,.notif-panel:not([hidden]),.sort-menu,.toast.show{animation:none!important}}
