@@ -17,8 +17,9 @@ export interface CoreDeps {
   fetchViewer(): Promise<Viewer | null>;
   // Returns the client row if the caller's RLS allows reading it, otherwise null.
   fetchClient(clientId: number): Promise<ClientRow | null>;
-  // Returns active files readable with the caller's JWT (RLS). Access is re-checked by the engine.
-  fetchActiveFiles(): Promise<PropertyInput[]>;
+  // Returns ALL active files readable with the caller's JWT (RLS), paged to the end.
+  // complete=false means the reader hit its safety cap, so the data is partial.
+  fetchActiveFiles(): Promise<{ rows: PropertyInput[]; complete: boolean }>;
 }
 
 export interface CoreResponse {
@@ -85,9 +86,17 @@ export async function runMatch(action: unknown, rawClientId: unknown, deps: Core
     return { status: 404, body: { ok: false, code: 'not_found', error: 'مشتری پیدا نشد یا برای تو قابل‌دسترسی نیست.' } };
   }
 
-  const files = await deps.fetchActiveFiles();
-  const out = rankTopFiles(client, files, { viewer });
+  const fetched = await deps.fetchActiveFiles();
+  // Partial data must never be ranked: the top 5 would look complete when it is not.
+  if (!fetched.complete) {
+    return { status: 503, body: { ok: false, code: 'incomplete_data', error: 'داده فایل‌ها کامل خوانده نشد؛ نتیجه نمایش داده نمی‌شود. دوباره تلاش کن.' } };
+  }
+  const out = rankTopFiles(client, fetched.rows, { viewer });
   const considered = out.considered;
+  // Hidden-file counts reveal how many personal files others have, so only managers see that count.
+  const excluded = viewer.role === 'مدیر'
+    ? out.excluded
+    : { notActive: out.excluded.notActive, dealMismatch: out.excluded.dealMismatch };
 
   return {
     status: 200,
@@ -98,7 +107,7 @@ export async function runMatch(action: unknown, rawClientId: unknown, deps: Core
       data_sufficiency: considered === 0 ? 'ناکافی' : 'کافی',
       summary: {
         considered,
-        excluded: out.excluded,
+        excluded,
         min_score: MATCH_MIN_SCORE,
         active_statuses: ACTIVE_PROPERTY_STATUSES,
       },

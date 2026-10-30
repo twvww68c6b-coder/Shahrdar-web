@@ -71,13 +71,23 @@ function buildDeps(authz: string): CoreDeps {
       return rows[0] ?? null;
     },
 
-    async fetchActiveFiles(): Promise<PropertyInput[]> {
+    async fetchActiveFiles(): Promise<{ rows: PropertyInput[]; complete: boolean }> {
+      // Page through every active file in a stable order. The cap stops runaway reads; hitting it
+      // reports complete=false so the core refuses to rank partial data.
       const statuses = `in.(${ACTIVE_PROPERTY_STATUSES.map((s) => `"${s}"`).join(',')})`;
-      const rows = await rest<PropertyInput>(
-        `properties?select=${PROPERTY_COLUMNS.join(',')}&status=${encodeURIComponent(statuses)}&limit=500`,
-        authz,
-      );
-      return rows;
+      const PAGE = 500;
+      const MAX_PAGES = 40; // 20,000 files
+      const rows: PropertyInput[] = [];
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const chunk = await rest<PropertyInput>(
+          `properties?select=${PROPERTY_COLUMNS.join(',')}&status=${encodeURIComponent(statuses)}` +
+          `&order=id.asc&limit=${PAGE}&offset=${page * PAGE}`,
+          authz,
+        );
+        rows.push(...chunk);
+        if (chunk.length < PAGE) return { rows, complete: true };
+      }
+      return { rows, complete: false };
     },
   };
 }

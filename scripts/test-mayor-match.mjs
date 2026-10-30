@@ -52,7 +52,7 @@ const files = [
 const depsFor = (viewer, rows = clients, fileRows = files) => ({
   fetchViewer: async () => viewer,
   fetchClient: async (id) => rows.find((c) => c.id === id) ?? null,
-  fetchActiveFiles: async () => fileRows,
+  fetchActiveFiles: async () => ({ rows: fileRows, complete: true }),
 });
 
 // ---- 1) actions and client ids
@@ -103,7 +103,8 @@ const depsFor = (viewer, rows = clients, fileRows = files) => ({
   const codes = adv.body.files.map((f) => f.code);
   check('advisor sees only own and non-personal files', codes.includes('A1') && codes.includes('A2') && !codes.includes('P-OTHER'), codes.join(','));
   check('inactive files are excluded and counted', adv.body.summary.excluded.notActive === 1 && !codes.includes('OLD'));
-  check('other advisor\'s personal file is counted as notVisible', adv.body.summary.excluded.notVisible === 1);
+  const mgrCount = await runMatch('match', 10, depsFor(manager));
+  check('manager sees all files, so notVisible is 0 and the key is present', mgrCount.body.summary.excluded.notVisible === 0 && 'notVisible' in mgrCount.body.summary.excluded);
 
   const mgr = await runMatch('match', 10, depsFor(manager, clients, files));
   check('manager sees the personal file too', mgr.body.files.some((f) => f.code === 'P-OTHER'));
@@ -171,11 +172,40 @@ if (fs.existsSync(fixturePath)) {
   check('canSeeClient: owner sees own personal', canSeeClient({ ...clients[2], owner_user_id: 2 }, advisor) === true);
 }
 
+// ---- 8b) partial data is never ranked; error bodies never leak rows; counts hidden from advisors
+{
+  const partial = await runMatch('match', 10, { ...depsFor(advisor), fetchActiveFiles: async () => ({ rows: files.slice(0, 1), complete: false }) });
+  check('partial file list → 503 incomplete_data, no files ranked', partial.status === 503 && partial.body.code === 'incomplete_data' && !('files' in partial.body));
+
+  const adv = await runMatch('match', 10, depsFor(advisor));
+  check('advisor response does not reveal hidden-file count', !('notVisible' in adv.body.summary.excluded));
+  const mgr = await runMatch('match', 10, depsFor(manager));
+  check('manager response keeps notVisible count', 'notVisible' in mgr.body.summary.excluded);
+
+  const errBodies = [
+    await runMatch('chat', 10, depsFor(advisor)),
+    await runMatch('match', 'x', depsFor(advisor)),
+    await runMatch('match', 10, depsFor(null)),
+    await runMatch('match', 12, depsFor(advisor)),
+    await runMatch('match', 999, depsFor(advisor)),
+    await runMatch('match', 10, { ...depsFor(advisor), fetchActiveFiles: async () => ({ rows: files, complete: false }) }),
+  ];
+  const leakPattern = /P-OTHER|A1|A2|OLD|شریعتی|\b4\b/;
+  check('no error body contains file codes or personal data', errBodies.every((r) => !leakPattern.test(JSON.stringify(r.body)) && r.status >= 400));
+
+  let propagated = false;
+  try {
+    await runMatch('match', 10, { ...depsFor(advisor), fetchActiveFiles: async () => { throw new Error('rest 403 for properties'); } });
+  } catch (e) { propagated = /rest 403/.test(e.message); }
+  check('reader failure propagates (adapter turns it into a generic 500, no partial data)', propagated);
+}
+
 // ---- 9) adapter (static): caller JWT only, no service role, no contact columns selected
 {
   const src = fs.readFileSync(path.join(root, 'supabase/functions/mayor-match/index.ts'), 'utf8');
   check('adapter does not read the service role key', !/SERVICE_ROLE/.test(src));
   check('adapter forwards the caller Authorization header', /Authorization: authz/.test(src));
+  check('adapter pages in stable id order with a cap that reports incomplete data', /order=id\.asc/.test(src) && /MAX_PAGES/.test(src) && /complete: false/.test(src));
   check('adapter does not import or call the mayor function or any model', !/mayor\/index|generativelanguage|gemini/i.test(src));
   const cols = src.match(/CLIENT_COLUMNS = \[[\s\S]*?\];/)?.[0] + src.match(/PROPERTY_COLUMNS = \[[\s\S]*?\];/)?.[0];
   check('adapter selects no phone, name, owner name or description', cols && !/phone|name|owner_name|owner_phone|description/.test(cols.replace(/owner_user_id/g, '')));
