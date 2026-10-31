@@ -159,23 +159,52 @@ body.home-active .topbar .eyebrow{display:none}
 .nav button,.mobile-nav button{transition:background-color .2s ease,color .2s ease,transform .18s ease}
 .mobile-nav button.active span{transform:translateY(-1px);transition:transform .25s ease}
 
-/* Entrance: page content and cards fade up. "backwards" fill so hover/press transforms still work after the animation ends. */
-@keyframes shCardIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
-@keyframes shSheetUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
-@keyframes shMenuIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+/* ---- Motion system (transform + opacity only; no animated blur) ---- */
+:root:not([data-theme="light"]){--ease-out:cubic-bezier(.16,1,.3,1);--ease-soft:cubic-bezier(.2,.8,.2,1);--lift:0 22px 60px rgba(2,4,10,.55)}
+@keyframes shPageIn{from{opacity:0}to{opacity:1}}
+@keyframes shCardIn{from{opacity:0;transform:translate3d(0,16px,0) scale(.975)}to{opacity:1;transform:none}}
+@keyframes shSheetUp{from{opacity:0;transform:translate3d(0,28px,0)}to{opacity:1;transform:none}}
+@keyframes shMenuIn{from{opacity:0;transform:translate3d(0,-8px,0) scale(.97)}to{opacity:1;transform:none}}
 @keyframes shBackdrop{from{opacity:0}to{opacity:1}}
-.page.active .hero,.page.active .stat,.page.active .panel,.page.active .quick,.page.active .slide-card{animation:shCardIn .5s cubic-bezier(.2,.7,.2,1) backwards}
-.page.active .stat:nth-child(2),.page.active .panel:nth-child(2),.page.active .quick:nth-child(2){animation-delay:.05s}
-.page.active .stat:nth-child(3),.page.active .panel:nth-child(3),.page.active .quick:nth-child(3){animation-delay:.1s}
-.page.active .stat:nth-child(4),.page.active .panel:nth-child(4),.page.active .quick:nth-child(4){animation-delay:.15s}
-.page.active .stat:nth-child(5),.page.active .quick:nth-child(5){animation-delay:.2s}
-.page.active .quick:nth-child(6){animation-delay:.25s}
-.modal-backdrop.open{animation:shBackdrop .22s ease backwards}
-.modal-backdrop.open .modal{animation:shMenuIn .28s cubic-bezier(.2,.7,.2,1) backwards}
-.more-sheet:not([hidden]){animation:shBackdrop .22s ease backwards}
-.more-sheet:not([hidden]) .more-card{animation:shSheetUp .32s cubic-bezier(.2,.7,.2,1) backwards}
-.notif-panel:not([hidden]),.sort-menu{animation:shMenuIn .2s ease backwards}
-.toast.show{animation:shSheetUp .22s ease backwards}
+@keyframes shSheen{from{transform:translate3d(-120%,0,0)}to{transform:translate3d(120%,0,0)}}
+
+/* Page transition: soft fade of the whole page; cards then arrive with a stagger. */
+.page.active{animation:shPageIn .4s ease backwards}
+.page.active .hero,.page.active .stat,.page.active .panel,.page.active .quick,.page.active .slide-card{animation:shCardIn .62s var(--ease-soft) backwards}
+.page.active .stat:nth-child(1),.page.active .panel:nth-child(1),.page.active .quick:nth-child(1){animation-delay:.04s}
+.page.active .stat:nth-child(2),.page.active .panel:nth-child(2),.page.active .quick:nth-child(2){animation-delay:.1s}
+.page.active .stat:nth-child(3),.page.active .panel:nth-child(3),.page.active .quick:nth-child(3){animation-delay:.16s}
+.page.active .stat:nth-child(4),.page.active .panel:nth-child(4),.page.active .quick:nth-child(4){animation-delay:.22s}
+.page.active .stat:nth-child(5),.page.active .panel:nth-child(5),.page.active .quick:nth-child(5){animation-delay:.28s}
+.page.active .quick:nth-child(6),.page.active .panel:nth-child(6){animation-delay:.34s}
+.page.active .quick:nth-child(n+7),.page.active .panel:nth-child(n+7){animation-delay:.4s}
+
+/* Overlays and menus: soft open with an easing curve. */
+.modal-backdrop.open{animation:shBackdrop .28s ease backwards}
+.modal-backdrop.open .modal{animation:shMenuIn .42s var(--ease-out) backwards}
+.more-sheet:not([hidden]){animation:shBackdrop .28s ease backwards}
+.more-sheet:not([hidden]) .more-card{animation:shSheetUp .46s var(--ease-out) backwards}
+.notif-panel:not([hidden]),.sort-menu{animation:shMenuIn .3s var(--ease-out) backwards}
+.toast.show{animation:shSheetUp .34s var(--ease-out) backwards}
+
+/* Interactive depth: lift on hover, press on touch, light sweep across glass tiles. */
+.quick,.stat-link{position:relative;overflow:hidden;transition:transform .42s var(--ease-out),box-shadow .42s var(--ease-out),border-color .3s ease}
+.quick::after,.stat-link::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(242,221,166,.13) 50%,transparent 60%);transform:translate3d(-120%,0,0);pointer-events:none}
+.quick:hover::after,.stat-link:hover::after{animation:shSheen .9s var(--ease-out)}
+.quick:hover,.stat-link:hover,.stat-link:focus-visible{transform:translate3d(0,-3px,0)}
+.quick:active,.stat-link:active,.primary:active,.ghost:active,.icon-btn:active,.row-menu:active{transform:scale(.965);transition-duration:.12s}
+.primary,.ghost,.icon-btn,.row-menu{transition:transform .22s var(--ease-soft),filter .22s ease,box-shadow .3s ease,background-color .25s ease,border-color .25s ease}
+.nav button,.mobile-nav button{transition:background-color .28s ease,color .28s ease,transform .22s var(--ease-soft)}
+.mobile-nav button:active,.nav button:active{transform:scale(.94)}
+.mobile-nav button.active span{animation:shCardIn .45s var(--ease-soft) backwards}
+:root:not([data-theme="light"]) .quick:hover,:root:not([data-theme="light"]) .stat-link:hover{box-shadow:var(--lift),0 0 28px rgba(216,181,107,.14),inset 0 1px 0 var(--glass-shine)}
+
+/* Low-end devices and reduced-motion users: keep only the essential fades. */
+@media (prefers-reduced-motion:reduce){
+  .page.active,.page.active .hero,.page.active .stat,.page.active .panel,.page.active .quick,.page.active .slide-card,.modal-backdrop.open,.modal-backdrop.open .modal,.more-sheet:not([hidden]),.more-sheet:not([hidden]) .more-card,.notif-panel:not([hidden]),.sort-menu,.toast.show,.quick:hover::after,.stat-link:hover::after{animation:none!important}
+  .quick,.stat-link,.primary,.ghost,.icon-btn,.row-menu{transition:none!important}
+  .quick::after,.stat-link::after{display:none}
+}
 
 @media(max-width:700px){
   :root:not([data-theme="light"]) .mobile-nav,:root:not([data-theme="light"]) .sidebar{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
