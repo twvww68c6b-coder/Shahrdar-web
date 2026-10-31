@@ -210,6 +210,39 @@ body.home-active .topbar .eyebrow{display:none}
   :root:not([data-theme="light"]) .mobile-nav,:root:not([data-theme="light"]) .sidebar{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 }
 @media(prefers-reduced-motion:reduce){.page.active .hero,.page.active .stat,.page.active .panel,.page.active .quick,.page.active .slide-card,.modal-backdrop.open,.modal-backdrop.open .modal,.more-sheet:not([hidden]),.more-sheet:not([hidden]) .more-card,.notif-panel:not([hidden]),.sort-menu,.toast.show{animation:none!important}}
+/* ===== Aurora liquid-glass language (Shahrdar palette kept: navy + gold). CSS only; no markup/logic changes. ===== */
+@keyframes shSheenOnce{from{transform:translate3d(-150%,0,0) skewX(-18deg)}to{transform:translate3d(270%,0,0) skewX(-18deg)}}
+@keyframes shSlideL{from{opacity:0;transform:translate3d(-26px,0,0)}to{opacity:1;transform:none}}
+@keyframes shReveal{from{opacity:0;transform:translate3d(0,100%,0)}to{opacity:1;transform:none}}
+
+/* Glass panels: frosted gradient + moving specular sheen (plays on each page entry) */
+.panel,.stat,.hero,.slide-card{position:relative;isolation:isolate;overflow:hidden}
+.stat::before{content:"";position:absolute;inset:0;width:38%;border-radius:inherit;background:linear-gradient(100deg,transparent 0%,rgba(242,221,166,.13) 50%,transparent 100%);transform:translate3d(-150%,0,0) skewX(-18deg);pointer-events:none;z-index:0}
+.page.active .stat::before{animation:shSheenOnce 1.15s var(--e-soft,cubic-bezier(.22,.61,.36,1)) 1.1s 1 both}
+.hero::before{content:"";position:absolute;inset:0;width:38%;background:linear-gradient(100deg,transparent 0%,rgba(242,221,166,.10) 50%,transparent 100%);transform:translate3d(-150%,0,0) skewX(-18deg);pointer-events:none;z-index:0}
+.page.active .hero::before{animation:shSheenOnce 1.3s cubic-bezier(.22,.61,.36,1) .9s 1 both}
+:root:not([data-theme="light"]) .panel,:root:not([data-theme="light"]) .stat,:root:not([data-theme="light"]) .hero,:root:not([data-theme="light"]) .slide-card{background:linear-gradient(180deg,rgba(40,54,80,.42) 0%,rgba(26,36,58,.46) 24%,rgba(18,26,44,.5) 78%,rgba(14,20,34,.56) 100%)}
+
+/* Entry choreography: sidebar slides in, nav items follow; headline rises from a mask. */
+@media (min-width:701px){
+  .sidebar{animation:shSlideL .9s var(--ease-out) .05s backwards}
+  .nav button{animation:shCardIn .6s var(--ease-soft) backwards}
+  .nav button:nth-child(1){animation-delay:.36s}.nav button:nth-child(2){animation-delay:.41s}.nav button:nth-child(3){animation-delay:.46s}.nav button:nth-child(4){animation-delay:.51s}.nav button:nth-child(5){animation-delay:.56s}.nav button:nth-child(6){animation-delay:.61s}.nav button:nth-child(7){animation-delay:.66s}.nav button:nth-child(8){animation-delay:.71s}.nav button:nth-child(9){animation-delay:.76s}.nav button:nth-child(10){animation-delay:.81s}
+}
+.topbar h1{overflow:hidden;padding-bottom:.08em}
+.topbar h1>span,.page.active .hero h2{animation:shReveal .9s var(--ease-out) .15s backwards}
+
+/* Ambient light: static gold/blue glow behind the glass (a moving full-screen layer caused dropped frames). */
+body::before{content:"";position:fixed;inset:-20%;pointer-events:none;z-index:-1;background:radial-gradient(circle at 28% 22%,rgba(216,181,107,.11) 0,transparent 38%),radial-gradient(circle at 78% 82%,rgba(110,140,200,.08) 0,transparent 42%)}
+
+/* Micro-interactions on tappable glass */
+.quick,.stat-link,.primary,.ghost,.icon-btn,.row-menu{-webkit-tap-highlight-color:transparent}
+.primary:focus-visible,.ghost:focus-visible,.quick:focus-visible,.nav button:focus-visible,.mobile-nav button:focus-visible{outline:2px solid rgba(242,221,166,.8);outline-offset:2px}
+
+/* Phones: keep frosted glass on cards (measured smooth at this size), no ambient drift. */
+@media (max-width:700px){
+  .panel,.stat,.hero,.quick,.slide-card{-webkit-backdrop-filter:blur(8px) saturate(118%);backdrop-filter:blur(8px) saturate(118%)}
+}
 </style></head>
 <body class="auth-required">
 <div id="telegramLoginScreen" class="tg-login-screen">
